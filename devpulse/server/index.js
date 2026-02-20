@@ -1,6 +1,6 @@
+import './env.js';              // load .env BEFORE anything else
 import express from 'express';
 import cors from 'cors';
-import dotenv from 'dotenv';
 
 import teamRoutes from './routes/team.routes.js';
 import healthRoutes from './routes/health.routes.js';
@@ -12,8 +12,8 @@ import simulationRoutes from './routes/simulation.routes.js';
 import advisorRoutes from './routes/advisor.routes.js';
 import commitRoutes from './routes/commit.routes.js';
 import githubRoutes from './routes/github.routes.js';
-
-dotenv.config();
+import notificationRoutes from './routes/notification.routes.js';
+import discordBot from './services/discord-bot.service.js';
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -33,6 +33,7 @@ app.use('/api/simulation', simulationRoutes);
 app.use('/api/advisor', advisorRoutes);
 app.use('/api/commits', commitRoutes);
 app.use('/api/github', githubRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // ── Health check ────────────────────────────────────────
 app.get('/api/ping', (_req, res) => {
@@ -53,4 +54,6 @@ app.use((err, _req, res, _next) => {
 // ── Start ───────────────────────────────────────────────
 app.listen(PORT, () => {
   console.log(`⚡ DevPulse API running on http://localhost:${PORT}`);
+  // Start Discord bot (non-blocking — will log if token missing)
+  discordBot.start().catch(err => console.error('Discord bot start error:', err.message));
 });

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Github, ArrowLeft, RefreshCw, Unplug, CheckCircle2,
   AlertCircle, Loader2, ExternalLink, KeyRound, GitBranch,
+  MessageSquare, Mail, Send, Bell, BellRing, Zap,
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -16,6 +17,16 @@ export default function SettingsPage() {
   const [error, setError]     = useState(null);
   const [result, setResult]   = useState(null);
 
+  // Notification state
+  const [notifStatus, setNotifStatus] = useState(null);
+  const [discordUrl, setDiscordUrl]   = useState('');
+  const [gmailUser, setGmailUser]     = useState('');
+  const [gmailPass, setGmailPass]     = useState('');
+  const [gmailTo, setGmailTo]         = useState('');
+  const [notifAction, setNotifAction] = useState(null);
+  const [notifMsg, setNotifMsg]       = useState(null);
+  const [notifErr, setNotifErr]       = useState(null);
+
   /* ── fetch current status on mount ────────────────── */
   const fetchStatus = useCallback(async () => {
     try {
@@ -28,9 +39,18 @@ export default function SettingsPage() {
     }
   }, []);
 
-  useEffect(() => { fetchStatus(); }, [fetchStatus]);
+  const fetchNotifStatus = useCallback(async () => {
+    try {
+      const s = await api.getNotificationStatus();
+      setNotifStatus(s);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { fetchStatus(); fetchNotifStatus(); }, [fetchStatus, fetchNotifStatus]);
 
   const connected = status?.connected;
+  const discordConnected = notifStatus?.discord?.configured;
+  const gmailConnected   = notifStatus?.gmail?.configured;
 
   /* ── connect ──────────────────────────────────────── */
   const handleConnect = async (e) => {
@@ -89,6 +109,84 @@ export default function SettingsPage() {
     } finally {
       setAction(null);
     }
+  };
+
+  /* ── Discord handlers ────────────────────────────── */
+  const clearNotifMsg = () => { setNotifMsg(null); setNotifErr(null); };
+
+  const handleDiscordConnect = async (e) => {
+    e.preventDefault();
+    clearNotifMsg();
+    if (!discordUrl.trim()) { setNotifErr('Enter a Discord webhook URL'); return; }
+    setNotifAction('discord-connect');
+    try {
+      await api.configureDiscord(discordUrl.trim());
+      setNotifMsg('Discord webhook connected!');
+      await fetchNotifStatus();
+    } catch (err) { setNotifErr(err.message || 'Failed'); }
+    finally { setNotifAction(null); }
+  };
+
+  const handleDiscordDisconnect = async () => {
+    clearNotifMsg(); setNotifAction('discord-disconnect');
+    try { await api.disconnectDiscord(); setDiscordUrl(''); await fetchNotifStatus(); setNotifMsg('Discord disconnected.'); }
+    catch (err) { setNotifErr(err.message); }
+    finally { setNotifAction(null); }
+  };
+
+  const handleDiscordTest = async () => {
+    clearNotifMsg(); setNotifAction('discord-test');
+    try { await api.testDiscord(); setNotifMsg('Test message sent to Discord!'); }
+    catch (err) { setNotifErr(err.message); }
+    finally { setNotifAction(null); }
+  };
+
+  /* ── Gmail handlers ──────────────────────────────── */
+  const handleGmailConnect = async (e) => {
+    e.preventDefault();
+    clearNotifMsg();
+    if (!gmailUser.trim() || !gmailPass.trim() || !gmailTo.trim()) { setNotifErr('Fill all Gmail fields'); return; }
+    setNotifAction('gmail-connect');
+    try {
+      await api.configureGmail(gmailUser.trim(), gmailPass.trim(), gmailTo.trim());
+      setNotifMsg('Gmail configured!');
+      await fetchNotifStatus();
+    } catch (err) { setNotifErr(err.message || 'Failed'); }
+    finally { setNotifAction(null); }
+  };
+
+  const handleGmailDisconnect = async () => {
+    clearNotifMsg(); setNotifAction('gmail-disconnect');
+    try { await api.disconnectGmail(); setGmailUser(''); setGmailPass(''); setGmailTo(''); await fetchNotifStatus(); setNotifMsg('Gmail disconnected.'); }
+    catch (err) { setNotifErr(err.message); }
+    finally { setNotifAction(null); }
+  };
+
+  const handleGmailTest = async () => {
+    clearNotifMsg(); setNotifAction('gmail-test');
+    try { await api.testGmail(); setNotifMsg('Test email sent!'); }
+    catch (err) { setNotifErr(err.message); }
+    finally { setNotifAction(null); }
+  };
+
+  /* ── Send alert handlers ─────────────────────────── */
+  const handleSendGhosting = async () => {
+    clearNotifMsg(); setNotifAction('send-ghosting');
+    try { const r = await api.sendGhostingAlerts(); setNotifMsg(`Ghosting alerts sent (${r.sent || 0} alerts).`); }
+    catch (err) { setNotifErr(err.message); }
+    finally { setNotifAction(null); }
+  };
+  const handleSendBlockers = async () => {
+    clearNotifMsg(); setNotifAction('send-blockers');
+    try { const r = await api.sendBlockerAlerts('all'); setNotifMsg(`Blocker alerts sent (${r.sent || 0} alerts).`); }
+    catch (err) { setNotifErr(err.message); }
+    finally { setNotifAction(null); }
+  };
+  const handleSendHealth = async () => {
+    clearNotifMsg(); setNotifAction('send-health');
+    try { await api.sendHealthSummary(); setNotifMsg('Health summary sent!'); }
+    catch (err) { setNotifErr(err.message); }
+    finally { setNotifAction(null); }
   };
 
   /* ── render ───────────────────────────────────────── */
@@ -252,6 +350,159 @@ export default function SettingsPage() {
             <li>Disconnect anytime to revert to demo data.</li>
           </ul>
         </div>
+
+        {/* ── Notification Status Banner ─────────────── */}
+        {(notifMsg || notifErr) && (
+          <div className={`mt-6 flex items-start gap-3 rounded-xl border p-4 text-sm ${notifErr ? 'bg-red-500/10 border-red-500/20 text-red-400' : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'}`}>
+            {notifErr ? <AlertCircle size={18} className="mt-0.5 shrink-0" /> : <CheckCircle2 size={18} className="mt-0.5 shrink-0" />}
+            <span>{notifErr || notifMsg}</span>
+          </div>
+        )}
+
+        {/* ── Discord Connection Card ────────────────── */}
+        <div className="mt-8 bg-card rounded-2xl border border-border overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-secondary/30">
+            <MessageSquare size={20} className="text-indigo-400" />
+            <h2 className="text-lg font-semibold flex-1">Discord Webhook</h2>
+            {discordConnected && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-indigo-500/15 text-indigo-400 border border-indigo-500/20">
+                <CheckCircle2 size={12} /> Connected
+              </span>
+            )}
+          </div>
+          <div className="p-6 space-y-5">
+            {!discordConnected ? (
+              <form onSubmit={handleDiscordConnect} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
+                    <Zap size={14} /> Webhook URL
+                  </label>
+                  <input
+                    type="url"
+                    value={discordUrl}
+                    onChange={e => setDiscordUrl(e.target.value)}
+                    placeholder="https://discord.com/api/webhooks/..."
+                    required
+                    className="w-full bg-secondary border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-500/40 transition-all"
+                  />
+                  <p className="text-xs text-muted-foreground/60">
+                    Create in Discord → Server Settings → Integrations → Webhooks → New Webhook → Copy URL
+                  </p>
+                </div>
+                <button type="submit" disabled={!!notifAction} className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-wait text-white font-semibold rounded-xl px-4 py-3 transition-colors">
+                  {notifAction === 'discord-connect' ? <><Loader2 size={16} className="animate-spin" /> Connecting…</> : <><MessageSquare size={16} /> Connect Discord</>}
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-secondary/50 border border-border rounded-xl px-4 py-3">
+                  <p className="text-xs text-muted-foreground mb-1">Webhook</p>
+                  <p className="text-sm font-medium text-foreground truncate">{notifStatus?.discord?.webhookUrl ? '••••' + notifStatus.discord.webhookUrl.slice(-20) : 'Configured'}</p>
+                </div>
+                {notifStatus?.discord?.sent > 0 && (
+                  <div className="bg-secondary/50 border border-border rounded-xl px-4 py-3">
+                    <p className="text-xs text-muted-foreground mb-1">Messages Sent</p>
+                    <p className="text-sm font-medium text-foreground">{notifStatus.discord.sent}</p>
+                  </div>
+                )}
+                <div className="flex gap-3">
+                  <button onClick={handleDiscordTest} disabled={!!notifAction} className="flex-1 flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 border border-border disabled:opacity-50 text-foreground font-medium rounded-xl px-4 py-2.5 transition-colors">
+                    {notifAction === 'discord-test' ? <Loader2 size={16} className="animate-spin" /> : <><Send size={16} /> Test</>}
+                  </button>
+                  <button onClick={handleDiscordDisconnect} disabled={!!notifAction} className="flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-medium rounded-xl px-4 py-2.5 transition-colors">
+                    {notifAction === 'discord-disconnect' ? <Loader2 size={16} className="animate-spin" /> : <><Unplug size={16} /> Disconnect</>}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Gmail Configuration Card ───────────────── */}
+        <div className="mt-6 bg-card rounded-2xl border border-border overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-secondary/30">
+            <Mail size={20} className="text-amber-400" />
+            <h2 className="text-lg font-semibold flex-1">Gmail Notifications</h2>
+            {gmailConnected && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-amber-500/15 text-amber-400 border border-amber-500/20">
+                <CheckCircle2 size={12} /> Configured
+              </span>
+            )}
+          </div>
+          <div className="p-6 space-y-5">
+            {!gmailConnected ? (
+              <form onSubmit={handleGmailConnect} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Gmail Address</label>
+                  <input type="email" value={gmailUser} onChange={e => setGmailUser(e.target.value)} placeholder="you@gmail.com" required className="w-full bg-secondary border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40 transition-all" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">App Password</label>
+                  <input type="password" value={gmailPass} onChange={e => setGmailPass(e.target.value)} placeholder="16-char app password" required className="w-full bg-secondary border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40 transition-all" />
+                  <p className="text-xs text-muted-foreground/60">
+                    Generate at{' '}
+                    <a href="https://myaccount.google.com/apppasswords" target="_blank" rel="noreferrer" className="text-amber-400 hover:underline inline-flex items-center gap-1">myaccount.google.com/apppasswords <ExternalLink size={10} /></a>
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Recipients</label>
+                  <input type="text" value={gmailTo} onChange={e => setGmailTo(e.target.value)} placeholder="team@example.com, lead@example.com" required className="w-full bg-secondary border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-500/40 transition-all" />
+                </div>
+                <button type="submit" disabled={!!notifAction} className="w-full flex items-center justify-center gap-2 bg-amber-600 hover:bg-amber-500 disabled:opacity-50 disabled:cursor-wait text-white font-semibold rounded-xl px-4 py-3 transition-colors">
+                  {notifAction === 'gmail-connect' ? <><Loader2 size={16} className="animate-spin" /> Configuring…</> : <><Mail size={16} /> Configure Gmail</>}
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-secondary/50 border border-border rounded-xl px-4 py-3">
+                    <p className="text-xs text-muted-foreground mb-1">From</p>
+                    <p className="text-sm font-medium text-foreground truncate">{notifStatus?.gmail?.email || '—'}</p>
+                  </div>
+                  <div className="bg-secondary/50 border border-border rounded-xl px-4 py-3">
+                    <p className="text-xs text-muted-foreground mb-1">To</p>
+                    <p className="text-sm font-medium text-foreground truncate">{notifStatus?.gmail?.to || '—'}</p>
+                  </div>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={handleGmailTest} disabled={!!notifAction} className="flex-1 flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 border border-border disabled:opacity-50 text-foreground font-medium rounded-xl px-4 py-2.5 transition-colors">
+                    {notifAction === 'gmail-test' ? <Loader2 size={16} className="animate-spin" /> : <><Send size={16} /> Test Email</>}
+                  </button>
+                  <button onClick={handleGmailDisconnect} disabled={!!notifAction} className="flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-medium rounded-xl px-4 py-2.5 transition-colors">
+                    {notifAction === 'gmail-disconnect' ? <Loader2 size={16} className="animate-spin" /> : <><Unplug size={16} /> Disconnect</>}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Send Alerts Card ───────────────────────── */}
+        {(discordConnected || gmailConnected) && (
+          <div className="mt-6 bg-card rounded-2xl border border-border overflow-hidden">
+            <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-secondary/30">
+              <BellRing size={20} className="text-rose-400" />
+              <h2 className="text-lg font-semibold flex-1">Send Alerts Now</h2>
+            </div>
+            <div className="p-6">
+              <p className="text-sm text-muted-foreground mb-5">
+                Manually push alerts to all connected channels ({[discordConnected && 'Discord', gmailConnected && 'Gmail'].filter(Boolean).join(' + ')}).
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <button onClick={handleSendGhosting} disabled={!!notifAction} className="flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 font-medium rounded-xl px-4 py-3 transition-colors disabled:opacity-50">
+                  {notifAction === 'send-ghosting' ? <Loader2 size={16} className="animate-spin" /> : <><Bell size={16} /> Ghosting Alerts</>}
+                </button>
+                <button onClick={handleSendBlockers} disabled={!!notifAction} className="flex items-center justify-center gap-2 bg-orange-500/10 hover:bg-orange-500/20 border border-orange-500/20 text-orange-400 font-medium rounded-xl px-4 py-3 transition-colors disabled:opacity-50">
+                  {notifAction === 'send-blockers' ? <Loader2 size={16} className="animate-spin" /> : <><AlertCircle size={16} /> Blocker Alerts</>}
+                </button>
+                <button onClick={handleSendHealth} disabled={!!notifAction} className="flex items-center justify-center gap-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/20 text-blue-400 font-medium rounded-xl px-4 py-3 transition-colors disabled:opacity-50">
+                  {notifAction === 'send-health' ? <Loader2 size={16} className="animate-spin" /> : <><Zap size={16} /> Health Summary</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   );
