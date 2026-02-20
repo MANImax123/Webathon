@@ -80,6 +80,18 @@ export const api = {
   connectGithub: (token, owner, repo) => postJson('/github/connect', { token, owner, repo }),
   syncGithub: () => postJson('/github/sync', {}),
   disconnectGithub: () => postJson('/github/disconnect', {}),
+
+  // Notifications
+  getNotificationStatus: () => fetchJson('/notifications/status'),
+  configureDiscord: (webhookUrl) => postJson('/notifications/discord/configure', { webhookUrl }),
+  disconnectDiscord: () => postJson('/notifications/discord/disconnect', {}),
+  testDiscord: () => postJson('/notifications/discord/test', {}),
+  configureGmail: (email, password, to) => postJson('/notifications/gmail/configure', { email, password, to }),
+  disconnectGmail: () => postJson('/notifications/gmail/disconnect', {}),
+  testGmail: () => postJson('/notifications/gmail/test', {}),
+  sendGhostingAlerts: () => postJson('/notifications/send/ghosting', {}),
+  sendBlockerAlerts: (severity) => postJson(`/notifications/send/blockers${severity ? `?severity=${severity}` : ''}`, {}),
+  sendHealthSummary: () => postJson('/notifications/send/health', {}),
 };
 
 export default api;
