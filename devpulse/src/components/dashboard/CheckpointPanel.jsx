@@ -152,6 +152,11 @@ function CreateCheckpointForm({ members, onCreated, onCancel }) {
         <span>If Gmail is configured, a <strong className="text-foreground">calendar invite</strong> with reminder will be emailed to the assignee automatically.</span>
       </div>
 
+      <div className="flex items-center gap-3 text-xs text-muted-foreground bg-green-500/5 border border-green-500/10 rounded-xl px-4 py-2.5">
+        <Calendar size={14} className="text-green-400 flex-shrink-0" />
+        <span>If Google Calendar is configured, a <strong className="text-foreground">Google Calendar event</strong> will be created and all collaborator emails (fetched via GitHub API) will be invited automatically.</span>
+      </div>
+
       <div className="flex justify-end gap-2">
         <button type="button" onClick={onCancel} className="px-4 py-2 rounded-xl text-sm text-muted-foreground hover:text-foreground bg-secondary border border-border">
           Cancel
@@ -312,6 +317,18 @@ function CheckpointCard({ cp, isLead, onUpdate, onDelete }) {
             Created {new Date(cp.createdAt).toLocaleDateString()}
             {cp.completedAt && ` · Completed ${new Date(cp.completedAt).toLocaleDateString()}`}
           </div>
+
+          {/* Google Calendar link */}
+          {cp.calendarLink && (
+            <a
+              href={cp.calendarLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 text-xs text-green-400 hover:text-green-300 transition-colors bg-green-500/10 px-3 py-1.5 rounded-lg border border-green-500/20"
+            >
+              <CalendarDays size={12} /> View in Google Calendar
+            </a>
+          )}
         </div>
       )}
     </div>
@@ -730,9 +747,16 @@ export default function CheckpointPanel() {
           onCreated={(result) => {
             setShowCreate(false);
             loadData();
-            // Show confirmation if email was sent
+            // Show confirmation if email was sent or calendar event created
+            const messages = [];
             if (result?.emailSent) {
-              alert(`✅ Checkpoint created! Calendar invite sent to ${result.assigneeEmail}`);
+              messages.push(`📧 Calendar invite emailed to ${result.assigneeEmail}`);
+            }
+            if (result?.calendarEvent) {
+              messages.push(`📅 Google Calendar event created & all collaborators invited`);
+            }
+            if (messages.length > 0) {
+              alert(`✅ Checkpoint created!\n${messages.join('\n')}`);
             }
           }}
           onCancel={() => setShowCreate(false)}

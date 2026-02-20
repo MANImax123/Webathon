@@ -7,6 +7,7 @@
 import github from '../services/github.service.js';
 import { syncFromGitHub } from '../services/analytics.service.js';
 import { restoreDefaults, TEAM } from '../data/store.js';
+import discordBot from '../services/discord-bot.service.js';
 
 /** GET /api/github/status */
 export const getStatus = (_req, res) => {
@@ -61,6 +62,14 @@ export const connect = async (req, res) => {
 
     // Sync all data
     const result = await syncFromGitHub();
+
+    // Notify Discord bot that a repo is now connected
+    discordBot.notifyRepoConnected({
+      owner, repo,
+      user: authInfo.user,
+      permission: authInfo.permission,
+    }).catch(err => console.warn('Discord bot notify failed:', err.message));
+
     res.json({
       status: 'connected',
       synced: true,
@@ -92,6 +101,11 @@ export const sync = async (_req, res) => {
 export const disconnect = (_req, res) => {
   github.disconnect();
   restoreDefaults();
+
+  // Notify Discord bot that repo was disconnected
+  discordBot.notifyRepoDisconnected()
+    .catch(err => console.warn('Discord bot notify failed:', err.message));
+
   res.json({ status: 'disconnected' });
 };
 

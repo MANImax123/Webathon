@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Github, ArrowLeft, RefreshCw, Unplug, CheckCircle2,
   AlertCircle, Loader2, ExternalLink, KeyRound, GitBranch,
-  MessageSquare, Mail, Send, Bell, BellRing, Zap, ShieldCheck, User,
+  MessageSquare, Mail, Send, Bell, BellRing, Zap, ShieldCheck, User, CalendarDays,
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -23,6 +23,8 @@ export default function SettingsPage() {
   const [gmailUser, setGmailUser]     = useState('');
   const [gmailPass, setGmailPass]     = useState('');
   const [gmailTo, setGmailTo]         = useState('');
+  const [gcalSaEmail, setGcalSaEmail]   = useState('');
+  const [gcalSaKey, setGcalSaKey]         = useState('');
   const [notifAction, setNotifAction] = useState(null);
   const [notifMsg, setNotifMsg]       = useState(null);
   const [notifErr, setNotifErr]       = useState(null);
@@ -46,11 +48,56 @@ export default function SettingsPage() {
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { fetchStatus(); fetchNotifStatus(); }, [fetchStatus, fetchNotifStatus]);
+  /* ── Auto-reconnect from localStorage on mount ───── */
+  useEffect(() => {
+    const autoReconnect = async () => {
+      // First check if server already has a connection
+      try {
+        const s = await api.getGithubStatus();
+        if (s?.connected) {
+          setStatus(s);
+          setLoading(false);
+          fetchNotifStatus();
+          return;
+        }
+      } catch { /* server not connected, try localStorage */ }
+
+      // Try to restore from localStorage
+      const saved = localStorage.getItem('devpulse_github');
+      if (saved) {
+        try {
+          const { token: savedToken, owner, repo, repoUrl: savedUrl } = JSON.parse(saved);
+          if (owner && repo) {
+            setAction('connecting');
+            setRepoUrl(savedUrl || `${owner}/${repo}`);
+            if (savedToken) setToken(savedToken);
+            try {
+              const res = await api.connectGithub(savedToken || undefined, owner, repo);
+              setResult(res);
+              const s = await api.getGithubStatus();
+              setStatus(s);
+            } catch (err) {
+              // Stored credentials are stale — clear them
+              localStorage.removeItem('devpulse_github');
+              console.warn('Auto-reconnect failed, cleared saved credentials:', err.message);
+            } finally {
+              setAction(null);
+            }
+          }
+        } catch {
+          localStorage.removeItem('devpulse_github');
+        }
+      }
+      setLoading(false);
+      fetchNotifStatus();
+    };
+    autoReconnect();
+  }, [fetchNotifStatus]);
 
   const connected = status?.connected;
   const discordConnected = notifStatus?.discord?.configured;
   const gmailConnected   = notifStatus?.gmail?.configured;
+  const gcalConnected    = notifStatus?.googleCalendar?.configured;
 
   /* ── connect ──────────────────────────────────────── */
   const handleConnect = async (e) => {
@@ -71,6 +118,15 @@ export default function SettingsPage() {
     try {
       const res = await api.connectGithub(token || undefined, owner, repo);
       setResult(res);
+
+      // Persist to localStorage so user stays connected across refreshes
+      localStorage.setItem('devpulse_github', JSON.stringify({
+        token: token || null,
+        owner,
+        repo,
+        repoUrl: repoUrl.trim(),
+      }));
+
       await fetchStatus();
     } catch (err) {
       setError(err.message || 'Failed to connect');
@@ -101,6 +157,8 @@ export default function SettingsPage() {
     setResult(null);
     try {
       await api.disconnectGithub();
+      // Clear persisted credentials on explicit sign-out
+      localStorage.removeItem('devpulse_github');
       setStatus(null);
       setToken('');
       setRepoUrl('');
@@ -165,6 +223,40 @@ export default function SettingsPage() {
   const handleGmailTest = async () => {
     clearNotifMsg(); setNotifAction('gmail-test');
     try { await api.testGmail(); setNotifMsg('Test email sent!'); }
+    catch (err) { setNotifErr(err.message); }
+    finally { setNotifAction(null); }
+  };
+
+  /* ── Google Calendar handlers ───────────────────── */
+  const handleGcalConnect = async (e) => {
+    e.preventDefault();
+    clearNotifMsg();
+    if (!gcalSaEmail.trim() || !gcalSaKey.trim()) {
+      setNotifErr('Fill both Service Account fields'); return;
+    }
+    setNotifAction('gcal-connect');
+    try {
+      await api.configureGoogleCalendar({ serviceAccountEmail: gcalSaEmail.trim(), serviceAccountKey: gcalSaKey.trim() });
+      setNotifMsg('Google Calendar configured! Checkpoint events will now be added to Google Calendar.');
+      await fetchNotifStatus();
+    } catch (err) { setNotifErr(err.message || 'Failed'); }
+    finally { setNotifAction(null); }
+  };
+
+  const handleGcalDisconnect = async () => {
+    clearNotifMsg(); setNotifAction('gcal-disconnect');
+    try {
+      await api.disconnectGoogleCalendar();
+      setGcalSaEmail(''); setGcalSaKey('');
+      await fetchNotifStatus();
+      setNotifMsg('Google Calendar disconnected.');
+    } catch (err) { setNotifErr(err.message); }
+    finally { setNotifAction(null); }
+  };
+
+  const handleGcalTest = async () => {
+    clearNotifMsg(); setNotifAction('gcal-test');
+    try { await api.testGoogleCalendar(); setNotifMsg('Test event created in Google Calendar!'); }
     catch (err) { setNotifErr(err.message); }
     finally { setNotifAction(null); }
   };
@@ -507,6 +599,60 @@ export default function SettingsPage() {
           </div>
         </div>
 
+        {/* ── Google Calendar Configuration Card ─────── */}
+        <div className="mt-6 bg-card rounded-2xl border border-border overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-secondary/30">
+            <CalendarDays size={20} className="text-green-400" />
+            <h2 className="text-lg font-semibold flex-1">Google Calendar</h2>
+            {gcalConnected && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-green-500/15 text-green-400 border border-green-500/20">
+                <CheckCircle2 size={12} /> Configured
+              </span>
+            )}
+          </div>
+          <div className="p-6 space-y-5">
+            <p className="text-sm text-muted-foreground">
+              When enabled, checkpoints created by the lead will automatically create a <strong className="text-foreground">Google Calendar event</strong> and invite all collaborators (emails fetched via GitHub API).
+            </p>
+            {!gcalConnected ? (
+              <form onSubmit={handleGcalConnect} className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Service Account Email</label>
+                  <input type="email" value={gcalSaEmail} onChange={e => setGcalSaEmail(e.target.value)} placeholder="my-service@my-project.iam.gserviceaccount.com" required className="w-full bg-secondary border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500/40 transition-all" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Service Account Private Key</label>
+                  <textarea value={gcalSaKey} onChange={e => setGcalSaKey(e.target.value)} placeholder="-----BEGIN PRIVATE KEY-----\n..." required rows={4} className="w-full bg-secondary border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-green-500/40 focus:border-green-500/40 transition-all font-mono text-xs" />
+                  <p className="text-xs text-muted-foreground/60">
+                    Create a Service Account at{' '}
+                    <a href="https://console.cloud.google.com/iam-admin/serviceaccounts" target="_blank" rel="noreferrer" className="text-green-400 hover:underline inline-flex items-center gap-1">Google Cloud Console <ExternalLink size={10} /></a>
+                    {' '}&rarr; Create Key (JSON) &rarr; copy <code className="text-green-400">client_email</code> and <code className="text-green-400">private_key</code> from the JSON file.
+                    Then share your Google Calendar with the service account email (give &quot;Make changes to events&quot; permission).
+                  </p>
+                </div>
+                <button type="submit" disabled={!!notifAction} className="w-full flex items-center justify-center gap-2 bg-green-600 hover:bg-green-500 disabled:opacity-50 disabled:cursor-wait text-white font-semibold rounded-xl px-4 py-3 transition-colors">
+                  {notifAction === 'gcal-connect' ? <><Loader2 size={16} className="animate-spin" /> Configuring…</> : <><CalendarDays size={16} /> Configure Google Calendar</>}
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="bg-secondary/50 border border-border rounded-xl px-4 py-3">
+                  <p className="text-xs text-muted-foreground mb-1">Events Created</p>
+                  <p className="text-sm font-medium text-foreground">{notifStatus?.googleCalendar?.eventsCreated || 0}</p>
+                </div>
+                <div className="flex gap-3">
+                  <button onClick={handleGcalTest} disabled={!!notifAction} className="flex-1 flex items-center justify-center gap-2 bg-secondary hover:bg-secondary/80 border border-border disabled:opacity-50 text-foreground font-medium rounded-xl px-4 py-2.5 transition-colors">
+                    {notifAction === 'gcal-test' ? <Loader2 size={16} className="animate-spin" /> : <><Send size={16} /> Test Event</>}
+                  </button>
+                  <button onClick={handleGcalDisconnect} disabled={!!notifAction} className="flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-medium rounded-xl px-4 py-2.5 transition-colors">
+                    {notifAction === 'gcal-disconnect' ? <Loader2 size={16} className="animate-spin" /> : <><Unplug size={16} /> Disconnect</>}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* ── Send Alerts Card ───────────────────────── */}
         {(discordConnected || gmailConnected) && (
           <div className="mt-6 bg-card rounded-2xl border border-border overflow-hidden">
@@ -516,7 +662,7 @@ export default function SettingsPage() {
             </div>
             <div className="p-6">
               <p className="text-sm text-muted-foreground mb-5">
-                Manually push alerts to all connected channels ({[discordConnected && 'Discord', gmailConnected && 'Gmail'].filter(Boolean).join(' + ')}).
+                Manually push alerts to all connected channels ({[discordConnected && 'Discord', gmailConnected && 'Gmail', gcalConnected && 'Google Calendar'].filter(Boolean).join(' + ')}).
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <button onClick={handleSendGhosting} disabled={!!notifAction} className="flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 text-rose-400 font-medium rounded-xl px-4 py-3 transition-colors disabled:opacity-50">
