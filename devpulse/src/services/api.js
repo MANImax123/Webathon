@@ -99,6 +99,7 @@ export const api = {
 
   // GitHub Connection
   getGithubStatus: () => fetchJson('/github/status'),
+  getCollaboratorEmails: () => fetchJson('/github/emails'),
   connectGithub: (token, owner, repo) => postJson('/github/connect', { token, owner, repo }),
   syncGithub: () => postJson('/github/sync', {}),
   disconnectGithub: () => postJson('/github/disconnect', {}),

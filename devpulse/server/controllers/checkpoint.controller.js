@@ -5,6 +5,7 @@
 
 import * as store from '../data/store.js';
 import github from '../services/github.service.js';
+import gmail from '../services/gmail.service.js';
 
 let nextId = 100; // auto-increment ID
 
@@ -55,7 +56,7 @@ export const getCheckpoint = (req, res) => {
 };
 
 /** POST /api/checkpoints — create checkpoint (lead only) */
-export const createCheckpoint = (req, res) => {
+export const createCheckpoint = async (req, res) => {
   // Check if user is lead
   if (github.token && !github.isLead) {
     return res.status(403).json({ error: 'Only the repository lead/admin can create checkpoints' });
@@ -85,7 +86,21 @@ export const createCheckpoint = (req, res) => {
   };
 
   store.CHECKPOINTS = [...(store.CHECKPOINTS || []), checkpoint];
-  res.status(201).json(checkpoint);
+
+  // Send calendar invite email if Gmail is configured and assignee has an email
+  let emailSent = false;
+  const assigneeEmail = member?.email || null;
+  if (gmail.enabled && assigneeEmail) {
+    try {
+      const teamName = store.TEAM?.repo || store.TEAM?.name || 'Project';
+      await gmail.sendCheckpointInvite(checkpoint, assigneeEmail, teamName);
+      emailSent = true;
+    } catch (err) {
+      console.warn('Failed to send checkpoint invite email:', err.message);
+    }
+  }
+
+  res.status(201).json({ ...checkpoint, emailSent, assigneeEmail });
 };
 
 /** PUT /api/checkpoints/:id — update checkpoint (lead can edit all, member can update own progress) */
@@ -124,12 +139,12 @@ export const updateCheckpoint = (req, res) => {
 
   const updated = {
     ...cp,
-    ...(title       && { title }),
+    ...(title && { title }),
     ...(description != null && { description }),
-    ...(assignee    && { assignee: member?.id || assignee, assigneeName: member?.name || assignee }),
-    ...(priority    && { priority }),
-    ...(deadline    && { deadline: new Date(deadline).toISOString() }),
-    ...(status      && { status }),
+    ...(assignee && { assignee: member?.id || assignee, assigneeName: member?.name || assignee }),
+    ...(priority && { priority }),
+    ...(deadline && { deadline: new Date(deadline).toISOString() }),
+    ...(status && { status }),
     ...(progress != null && { progress: Math.min(100, Math.max(0, Number(progress))) }),
   };
 
