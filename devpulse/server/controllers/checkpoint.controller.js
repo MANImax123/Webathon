@@ -6,6 +6,7 @@
 import * as store from '../data/store.js';
 import github from '../services/github.service.js';
 import gmail from '../services/gmail.service.js';
+import calendarService from '../services/calendar.service.js';
 
 let nextId = 100; // auto-increment ID
 
@@ -100,7 +101,24 @@ export const createCheckpoint = async (req, res) => {
     }
   }
 
-  res.status(201).json({ ...checkpoint, emailSent, assigneeEmail });
+  // Create Google Calendar event if configured
+  let calendarEvent = null;
+  if (calendarService.enabled && assigneeEmail) {
+    try {
+      calendarEvent = await calendarService.createTaskEvent({
+        title: checkpoint.title,
+        description: checkpoint.description,
+        email: assigneeEmail,
+        date: checkpoint.deadline,
+        priority: checkpoint.priority,
+        assigneeName: checkpoint.assigneeName,
+      });
+    } catch (err) {
+      console.warn('Failed to create Google Calendar event:', err.message);
+    }
+  }
+
+  res.status(201).json({ ...checkpoint, emailSent, assigneeEmail, calendarEvent });
 };
 
 /** PUT /api/checkpoints/:id — update checkpoint (lead can edit all, member can update own progress) */

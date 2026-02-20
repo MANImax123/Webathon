@@ -124,6 +124,23 @@ export const api = {
   deleteCheckpoint: (id) => deleteJson(`/checkpoints/${id}`),
   getMemberCheckpoints: (memberId) => fetchJson(`/checkpoints/member/${memberId}`),
   getProgressSummary: () => fetchJson('/checkpoints/progress'),
+
+  // Agent — Inactivity Auto-Ping
+  detectInactivity: () => postJson('/agent/detect', {}),
+  getAgentAlerts: (status) => fetchJson(`/agent/alerts${status ? `?status=${status}` : ''}`),
+  respondToAlert: (alertId, userMessage) => postJson('/agent/respond', { alertId, userMessage }),
+  escalateAlert: (alertId) => postJson('/agent/escalate', { alertId }),
+
+  // Agent — Work Visibility
+  queryWork: (userQuery) => postJson('/agent/query', { userQuery }),
+
+  // Google Calendar Integration
+  getCalendarStatus: () => fetchJson('/calendar/status'),
+  configureCalendar: (data) => postJson('/calendar/configure', data),
+  getCalendarAuthUrl: () => fetchJson('/calendar/auth-url'),
+  createCalendarEvent: (data) => postJson('/calendar/create-event', data),
+  getCalendarEvents: () => fetchJson('/calendar/events'),
+  disconnectCalendar: () => postJson('/calendar/disconnect', {}),
 };
 
 export default api;

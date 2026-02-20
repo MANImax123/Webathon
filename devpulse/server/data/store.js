@@ -11,10 +11,10 @@ export let TEAM = {
   createdAt: '2026-02-06T10:00:00Z',
   deadline: '2026-02-22T18:00:00Z',
   members: [
-    { id: 'u1', name: 'Manit', avatar: 'M', role: 'Full Stack Lead', color: '#3b82f6', email: 'manit@example.com' },
-    { id: 'u2', name: 'Ravi', avatar: 'R', role: 'Backend Developer', color: '#10b981', email: 'ravi@example.com' },
-    { id: 'u3', name: 'Priya', avatar: 'P', role: 'Frontend Developer', color: '#8b5cf6', email: 'priya@example.com' },
-    { id: 'u4', name: 'Akshith', avatar: 'A', role: 'DevOps / AI', color: '#f59e0b', email: 'akshith@example.com' },
+    { id: 'u1', name: 'Manit', avatar: 'M', role: 'Full Stack Lead', color: '#3b82f6', email: 'kaushik.phaniharam@gmail.com' },
+    { id: 'u2', name: 'Ravi', avatar: 'R', role: 'Backend Developer', color: '#10b981', email: 'kaushik.phaniharam@gmail.com' },
+    { id: 'u3', name: 'Priya', avatar: 'P', role: 'Frontend Developer', color: '#8b5cf6', email: 'kaushik.phaniharam@gmail.com' },
+    { id: 'u4', name: 'Akshith', avatar: 'A', role: 'DevOps / AI', color: '#f59e0b', email: 'kaushik.phaniharam@gmail.com' },
   ],
 };
 

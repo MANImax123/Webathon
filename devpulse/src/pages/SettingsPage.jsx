@@ -4,28 +4,38 @@ import {
   Github, ArrowLeft, RefreshCw, Unplug, CheckCircle2,
   AlertCircle, Loader2, ExternalLink, KeyRound, GitBranch,
   MessageSquare, Mail, Send, Bell, BellRing, Zap, ShieldCheck, User,
+  CalendarDays,
 } from 'lucide-react';
 import api from '../services/api';
 
 export default function SettingsPage() {
   /* ── state ────────────────────────────────────────── */
-  const [token, setToken]   = useState('');
+  const [token, setToken] = useState('');
   const [repoUrl, setRepoUrl] = useState('');      // owner/repo format
   const [status, setStatus] = useState(null);       // github status object
   const [loading, setLoading] = useState(true);
-  const [action, setAction]   = useState(null);     // 'connecting' | 'syncing' | 'disconnecting'
-  const [error, setError]     = useState(null);
-  const [result, setResult]   = useState(null);
+  const [action, setAction] = useState(null);     // 'connecting' | 'syncing' | 'disconnecting'
+  const [error, setError] = useState(null);
+  const [result, setResult] = useState(null);
 
   // Notification state
   const [notifStatus, setNotifStatus] = useState(null);
-  const [discordUrl, setDiscordUrl]   = useState('');
-  const [gmailUser, setGmailUser]     = useState('');
-  const [gmailPass, setGmailPass]     = useState('');
-  const [gmailTo, setGmailTo]         = useState('');
+  const [discordUrl, setDiscordUrl] = useState('');
+  const [gmailUser, setGmailUser] = useState('');
+  const [gmailPass, setGmailPass] = useState('');
+  const [gmailTo, setGmailTo] = useState('');
   const [notifAction, setNotifAction] = useState(null);
-  const [notifMsg, setNotifMsg]       = useState(null);
-  const [notifErr, setNotifErr]       = useState(null);
+  const [notifMsg, setNotifMsg] = useState(null);
+  const [notifErr, setNotifErr] = useState(null);
+
+  // Google Calendar state
+  const [calStatus, setCalStatus] = useState(null);
+  const [calClientId, setCalClientId] = useState('');
+  const [calSecret, setCalSecret] = useState('');
+  const [calRefreshToken, setCalRefreshToken] = useState('');
+  const [calAction, setCalAction] = useState(null);
+  const [calMsg, setCalMsg] = useState(null);
+  const [calErr, setCalErr] = useState(null);
 
   /* ── fetch current status on mount ────────────────── */
   const fetchStatus = useCallback(async () => {
@@ -46,11 +56,18 @@ export default function SettingsPage() {
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { fetchStatus(); fetchNotifStatus(); }, [fetchStatus, fetchNotifStatus]);
+  const fetchCalStatus = useCallback(async () => {
+    try {
+      const s = await api.getCalendarStatus();
+      setCalStatus(s);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { fetchStatus(); fetchNotifStatus(); fetchCalStatus(); }, [fetchStatus, fetchNotifStatus, fetchCalStatus]);
 
   const connected = status?.connected;
   const discordConnected = notifStatus?.discord?.configured;
-  const gmailConnected   = notifStatus?.gmail?.configured;
+  const gmailConnected = notifStatus?.gmail?.configured;
 
   /* ── connect ──────────────────────────────────────── */
   const handleConnect = async (e) => {
@@ -60,7 +77,7 @@ export default function SettingsPage() {
 
     const parts = repoUrl.trim().replace(/^https?:\/\/github\.com\//, '').replace(/\.git$/, '').split('/');
     const owner = parts[0];
-    const repo  = parts[1];
+    const repo = parts[1];
 
     if (!owner || !repo) {
       setError('Enter a valid owner/repo or GitHub URL');
@@ -189,6 +206,52 @@ export default function SettingsPage() {
     finally { setNotifAction(null); }
   };
 
+  /* ── Google Calendar handlers ────────────────────── */
+  const clearCalMsg = () => { setCalMsg(null); setCalErr(null); };
+
+  const handleCalConnect = async (e) => {
+    e.preventDefault();
+    clearCalMsg();
+    if (!calClientId.trim() || !calSecret.trim() || !calRefreshToken.trim()) {
+      setCalErr('All three fields are required');
+      return;
+    }
+    setCalAction('connecting');
+    try {
+      await api.configureCalendar({
+        clientId: calClientId.trim(),
+        clientSecret: calSecret.trim(),
+        refreshToken: calRefreshToken.trim(),
+      });
+      setCalMsg('Google Calendar connected!');
+      await fetchCalStatus();
+    } catch (err) { setCalErr(err.message || 'Failed'); }
+    finally { setCalAction(null); }
+  };
+
+  const handleCalOAuth = async () => {
+    clearCalMsg();
+    setCalAction('oauth');
+    try {
+      const res = await api.getCalendarAuthUrl();
+      window.open(res.url, '_blank');
+      setCalMsg('Authorize in the opened tab, then paste the Refresh Token here.');
+    } catch (err) { setCalErr(err.message || 'Set Client ID and Secret first'); }
+    finally { setCalAction(null); }
+  };
+
+  const handleCalDisconnect = async () => {
+    clearCalMsg();
+    setCalAction('disconnecting');
+    try {
+      await api.disconnectCalendar();
+      setCalClientId(''); setCalSecret(''); setCalRefreshToken('');
+      setCalMsg('Google Calendar disconnected.');
+      await fetchCalStatus();
+    } catch (err) { setCalErr(err.message); }
+    finally { setCalAction(null); }
+  };
+
   /* ── render ───────────────────────────────────────── */
   if (loading) {
     return (
@@ -301,11 +364,10 @@ export default function SettingsPage() {
                         {status.user.name && <span className="ml-1.5 text-muted-foreground font-normal">({status.user.name})</span>}
                       </p>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
-                          status.isLead
-                            ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
-                            : 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
-                        }`}>
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${status.isLead
+                          ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                          : 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
+                          }`}>
                           <ShieldCheck size={10} />
                           {status.isLead ? 'Lead (Admin)' : `Contributor (${status.permission || 'read'})`}
                         </span>
@@ -532,6 +594,74 @@ export default function SettingsPage() {
             </div>
           </div>
         )}
+
+        {/* ── Google Calendar Integration Card ────────── */}
+        <div className="mt-6 bg-card rounded-2xl border border-border overflow-hidden">
+          <div className="flex items-center gap-3 px-6 py-4 border-b border-border bg-secondary/30">
+            <CalendarDays size={20} className="text-cyan-400" />
+            <h2 className="text-lg font-semibold flex-1">Google Calendar</h2>
+            {calStatus?.enabled && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                <CheckCircle2 size={12} /> Connected
+              </span>
+            )}
+          </div>
+          <div className="p-6 space-y-5">
+            <p className="text-sm text-muted-foreground">
+              Connect Google Calendar so assigned tasks automatically appear on members' calendars with reminders.
+            </p>
+
+            {calMsg && <p className="text-sm text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl">{calMsg}</p>}
+            {calErr && <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-xl">{calErr}</p>}
+
+            {!calStatus?.enabled ? (
+              <form onSubmit={handleCalConnect} className="space-y-4">
+                <div className="bg-cyan-500/5 border border-cyan-500/10 rounded-xl px-4 py-3">
+                  <p className="text-xs text-muted-foreground mb-1">Setup instructions:</p>
+                  <ol className="text-xs text-muted-foreground space-y-1 list-decimal list-inside">
+                    <li>Go to <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noreferrer" className="text-cyan-400 hover:underline">Google Cloud Console <ExternalLink size={10} className="inline" /></a></li>
+                    <li>Create OAuth 2.0 credentials (Web app, redirect: <code className="bg-secondary px-1 rounded text-xs">http://localhost:4000/api/calendar/oauth/callback</code>)</li>
+                    <li>Enable <strong>Google Calendar API</strong> in your project</li>
+                    <li>Enter Client ID & Secret below, click "Authorize" to get a refresh token</li>
+                  </ol>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Client ID</label>
+                  <input type="text" value={calClientId} onChange={e => setCalClientId(e.target.value)} placeholder="xxxx.apps.googleusercontent.com" className="w-full bg-secondary border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/40 transition-all" />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Client Secret</label>
+                  <input type="password" value={calSecret} onChange={e => setCalSecret(e.target.value)} placeholder="GOCSPX-xxxx" className="w-full bg-secondary border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/40 transition-all" />
+                </div>
+                <div className="flex gap-3">
+                  <button type="button" onClick={handleCalOAuth} disabled={!calClientId.trim() || !calSecret.trim() || !!calAction} className="flex items-center justify-center gap-2 bg-cyan-500/10 hover:bg-cyan-500/20 border border-cyan-500/20 text-cyan-400 font-medium rounded-xl px-4 py-2.5 transition-colors disabled:opacity-50">
+                    {calAction === 'oauth' ? <Loader2 size={16} className="animate-spin" /> : <><ExternalLink size={14} /> Authorize</>}
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-muted-foreground">Refresh Token</label>
+                  <input type="password" value={calRefreshToken} onChange={e => setCalRefreshToken(e.target.value)} placeholder="Paste refresh token from authorization step" className="w-full bg-secondary border border-border rounded-xl px-4 py-2.5 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 focus:border-cyan-500/40 transition-all" />
+                </div>
+                <button type="submit" disabled={!!calAction} className="w-full flex items-center justify-center gap-2 bg-cyan-600 hover:bg-cyan-500 disabled:opacity-50 disabled:cursor-wait text-white font-semibold rounded-xl px-4 py-3 transition-colors">
+                  {calAction === 'connecting' ? <><Loader2 size={16} className="animate-spin" /> Connecting…</> : <><CalendarDays size={16} /> Connect Google Calendar</>}
+                </button>
+              </form>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <Stat label="Status" value="Connected" />
+                  <Stat label="Events Created" value={calStatus?.eventsCreated ?? 0} />
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  When you assign tasks via Checkpoints, events are automatically added to the assignee's Google Calendar with 1-hour and 1-day reminders.
+                </p>
+                <button onClick={handleCalDisconnect} disabled={!!calAction} className="flex items-center justify-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 text-red-400 font-medium rounded-xl px-4 py-2.5 transition-colors">
+                  {calAction === 'disconnecting' ? <Loader2 size={16} className="animate-spin" /> : <><Unplug size={16} /> Disconnect Calendar</>}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
 
       </div>
     </div>

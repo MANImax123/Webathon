@@ -149,7 +149,7 @@ function CreateCheckpointForm({ members, onCreated, onCancel }) {
 
       <div className="flex items-center gap-3 text-xs text-muted-foreground bg-blue-500/5 border border-blue-500/10 rounded-xl px-4 py-2.5">
         <CalendarDays size={14} className="text-blue-400 flex-shrink-0" />
-        <span>If Gmail is configured, a <strong className="text-foreground">calendar invite</strong> with reminder will be emailed to the assignee automatically.</span>
+        <span>Task will be added to the assignee's <strong className="text-foreground">Google Calendar</strong> with reminders (1 hr &amp; 1 day before). If Gmail is configured, a calendar invite email is also sent.</span>
       </div>
 
       <div className="flex justify-end gap-2">
@@ -486,10 +486,10 @@ function CalendarView({ checkpoints }) {
             <div
               key={day}
               className={`h-20 rounded-lg border p-1.5 transition-colors ${isToday
-                  ? 'border-blue-500/50 bg-blue-500/5'
-                  : dayCps.length > 0
-                    ? 'border-border bg-secondary/30'
-                    : 'border-transparent'
+                ? 'border-blue-500/50 bg-blue-500/5'
+                : dayCps.length > 0
+                  ? 'border-border bg-secondary/30'
+                  : 'border-transparent'
                 }`}
             >
               <div className={`text-xs font-medium mb-1 ${isToday ? 'text-blue-400' : 'text-muted-foreground'}`}>
@@ -763,8 +763,8 @@ export default function CheckpointPanel() {
                 key={f.key}
                 onClick={() => setFilter(f.key)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filter === f.key
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-secondary text-muted-foreground hover:text-foreground border border-border'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground border border-border'
                   }`}
               >
                 {f.label}
