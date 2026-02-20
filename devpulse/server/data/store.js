@@ -166,13 +166,24 @@ export let CONTRIBUTION_STATS = [
   { name: 'Akshith', commits: 3, additions: 260, deletions: 20, percentage: 13 },
 ];
 
+// ── Checkpoints / Task Allocation ─────────────────────────
+// The repo lead allocates tasks to collaborators with deadlines
+export let CHECKPOINTS = [
+  { id: 'cp1', title: 'Complete user auth flow', description: 'Implement login, signup, JWT refresh, and session management', assignee: 'u1', assigneeName: 'Manit', priority: 'high', status: 'completed', deadline: '2026-02-12T18:00:00Z', createdAt: '2026-02-06T10:00:00Z', completedAt: '2026-02-12T09:00:00Z', createdBy: 'lead', progress: 100 },
+  { id: 'cp2', title: 'Database schema & migration', description: 'Design and implement MongoDB schemas for users, groups, sessions', assignee: 'u2', assigneeName: 'Ravi', priority: 'critical', status: 'overdue', deadline: '2026-02-15T18:00:00Z', createdAt: '2026-02-06T10:00:00Z', completedAt: null, createdBy: 'lead', progress: 40 },
+  { id: 'cp3', title: 'Dashboard UI components', description: 'Build all dashboard panels including sidebar, navbar, and card components', assignee: 'u3', assigneeName: 'Priya', priority: 'high', status: 'in-progress', deadline: '2026-02-20T18:00:00Z', createdAt: '2026-02-08T10:00:00Z', completedAt: null, createdBy: 'lead', progress: 65 },
+  { id: 'cp4', title: 'CI/CD pipeline & deployment', description: 'Set up Docker, GitHub Actions, and Railway deployment', assignee: 'u4', assigneeName: 'Akshith', priority: 'medium', status: 'in-progress', deadline: '2026-02-19T18:00:00Z', createdAt: '2026-02-06T10:00:00Z', completedAt: null, createdBy: 'lead', progress: 70 },
+  { id: 'cp5', title: 'Real-time chat integration', description: 'Implement Socket.IO based messaging system', assignee: 'u1', assigneeName: 'Manit', priority: 'medium', status: 'completed', deadline: '2026-02-11T18:00:00Z', createdAt: '2026-02-08T10:00:00Z', completedAt: '2026-02-10T14:00:00Z', createdBy: 'lead', progress: 100 },
+  { id: 'cp6', title: 'Study group CRUD API', description: 'Build REST endpoints for creating, reading, updating, and deleting study groups', assignee: 'u2', assigneeName: 'Ravi', priority: 'high', status: 'overdue', deadline: '2026-02-14T18:00:00Z', createdAt: '2026-02-08T10:00:00Z', completedAt: null, createdBy: 'lead', progress: 25 },
+];
+
 // ── Snapshot of original demo data (taken once at import time) ──
 const _DEFAULTS = {
   TEAM, COMMITS, BRANCHES, PULL_REQUESTS,
   HEALTH_SCORE, VELOCITY_DATA, ACTIVE_WORK,
   BLOCKERS, GHOSTING_ALERTS, INTEGRATION_RISKS,
   BUS_FACTOR, SIMULATION_SCENARIOS, COMMIT_HONESTY,
-  AI_ADVISOR_RESPONSES, CONTRIBUTION_STATS,
+  AI_ADVISOR_RESPONSES, CONTRIBUTION_STATS, CHECKPOINTS,
 };
 
 /**
@@ -195,6 +206,7 @@ export function updateStore(data) {
   if (data.COMMIT_HONESTY)       COMMIT_HONESTY       = data.COMMIT_HONESTY;
   if (data.AI_ADVISOR_RESPONSES) AI_ADVISOR_RESPONSES = data.AI_ADVISOR_RESPONSES;
   if (data.CONTRIBUTION_STATS)   CONTRIBUTION_STATS   = data.CONTRIBUTION_STATS;
+  if (data.CHECKPOINTS)          CHECKPOINTS          = data.CHECKPOINTS;
 }
 
 /** Restore all values to the original demo data */
@@ -214,4 +226,5 @@ export function restoreDefaults() {
   COMMIT_HONESTY       = _DEFAULTS.COMMIT_HONESTY;
   AI_ADVISOR_RESPONSES = _DEFAULTS.AI_ADVISOR_RESPONSES;
   CONTRIBUTION_STATS   = _DEFAULTS.CONTRIBUTION_STATS;
+  CHECKPOINTS          = _DEFAULTS.CHECKPOINTS;
 }

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import {
   Github, ArrowLeft, RefreshCw, Unplug, CheckCircle2,
   AlertCircle, Loader2, ExternalLink, KeyRound, GitBranch,
-  MessageSquare, Mail, Send, Bell, BellRing, Zap,
+  MessageSquare, Mail, Send, Bell, BellRing, Zap, ShieldCheck, User,
 } from 'lucide-react';
 import api from '../services/api';
 
@@ -285,6 +285,35 @@ export default function SettingsPage() {
             {/* ── Connected: show status + actions ───── */}
             {connected && (
               <div className="space-y-5">
+                {/* Authenticated User Card */}
+                {status.user && (
+                  <div className="flex items-center gap-4 bg-secondary/50 border border-border rounded-xl px-4 py-3">
+                    {status.user.avatar_url ? (
+                      <img src={status.user.avatar_url} alt={status.user.login} className="w-10 h-10 rounded-full border border-border" />
+                    ) : (
+                      <div className="w-10 h-10 rounded-full bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                        <User size={18} className="text-blue-400" />
+                      </div>
+                    )}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-foreground truncate">
+                        {status.user.login}
+                        {status.user.name && <span className="ml-1.5 text-muted-foreground font-normal">({status.user.name})</span>}
+                      </p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className={`inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full ${
+                          status.isLead
+                            ? 'bg-amber-500/15 text-amber-400 border border-amber-500/20'
+                            : 'bg-blue-500/15 text-blue-400 border border-blue-500/20'
+                        }`}>
+                          <ShieldCheck size={10} />
+                          {status.isLead ? 'Lead (Admin)' : `Contributor (${status.permission || 'read'})`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <Stat label="Repository" value={`${status.owner}/${status.repo}`} />
                   <Stat label="Last Synced" value={status.syncedAt ? new Date(status.syncedAt).toLocaleString() : 'Never'} />
@@ -331,6 +360,7 @@ export default function SettingsPage() {
               <div className="flex items-start gap-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 text-sm text-emerald-400">
                 <CheckCircle2 size={18} className="mt-0.5 shrink-0" />
                 <span>
+                  {result.user && <>Authenticated as <strong>{result.user}</strong> ({result.permission || 'contributor'}). </>}
                   Synced <strong>{result.commits}</strong> commits, <strong>{result.members}</strong> members,{' '}
                   <strong>{result.prs}</strong> PRs, <strong>{result.branches}</strong> branches
                   {result.blockers != null && <>, <strong>{result.blockers}</strong> blockers detected</>}.

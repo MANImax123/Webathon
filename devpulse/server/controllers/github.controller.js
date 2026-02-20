@@ -1,6 +1,7 @@
 // ────────────────────────────────────────────────────────
 // GitHub Connection Controller
-// connect → validate → sync | disconnect → restore demo
+// connect → validate token → check permissions → sync
+// disconnect → restore demo
 // ────────────────────────────────────────────────────────
 
 import github from '../services/github.service.js';
@@ -25,9 +26,19 @@ export const connect = async (req, res) => {
     // Validate by fetching repo info
     await github.getRepo();
 
+    // Always validate contributor access — token is required
+    const authInfo = await github.validateContributorAccess();
+
     // Sync all data
     const result = await syncFromGitHub();
-    res.json({ status: 'connected', synced: true, ...result });
+    res.json({
+      status: 'connected',
+      synced: true,
+      ...result,
+      user: authInfo.user,
+      permission: authInfo.permission,
+      isLead: authInfo.isLead,
+    });
   } catch (err) {
     github.disconnect();
     res.status(err.status || 500).json({ error: err.message });

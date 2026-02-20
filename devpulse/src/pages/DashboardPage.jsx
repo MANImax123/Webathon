@@ -8,6 +8,7 @@ import IntegrationRiskGraph from '../components/dashboard/IntegrationRiskGraph';
 import BusFactorHeatmap from '../components/dashboard/BusFactorHeatmap';
 import SimulationPanel from '../components/dashboard/SimulationPanel';
 import AIAdvisor from '../components/dashboard/AIAdvisor';
+import CheckpointPanel from '../components/dashboard/CheckpointPanel';
 
 const SECTIONS = {
   health: { title: 'Health Radar', subtitle: 'Overall project health and team velocity', component: HealthRadar },
@@ -17,6 +18,7 @@ const SECTIONS = {
   busfactor: { title: 'Bus Factor Heatmap', subtitle: 'Knowledge concentration risk per module', component: BusFactorHeatmap },
   simulation: { title: 'Delivery Risk Simulator', subtitle: 'Predict future project health with what-if scenarios', component: SimulationPanel },
   advisor: { title: 'AI Project Advisor', subtitle: 'Ask questions about your project status', component: AIAdvisor },
+  checkpoints: { title: 'Checkpoints & Tasks', subtitle: 'Allocate work, set deadlines, and monitor collaborator progress', component: CheckpointPanel },
 };
 
 export default function DashboardPage() {

@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   Activity, AlertTriangle, GitBranch, BarChart3, Shield,
   Users, Cpu, ChevronLeft, ChevronRight,
-  Home, GitCommit, Bot, SlidersHorizontal, Github
+  Home, GitCommit, Bot, SlidersHorizontal, Github, Target
 } from 'lucide-react';
 import AnimatedLogo from './AnimatedLogo';
 
@@ -21,6 +21,7 @@ const DASHBOARD_SECTIONS = [
   { id: 'busfactor', label: 'Bus Factor', icon: Shield, color: 'violet' },
   { id: 'simulation', label: 'Simulation', icon: SlidersHorizontal, color: 'cyan' },
   { id: 'advisor', label: 'AI Advisor', icon: Bot, color: 'blue' },
+  { id: 'checkpoints', label: 'Checkpoints', icon: Target, color: 'emerald' },
 ];
 
 export default function Sidebar({ activeSection, onSectionChange }) {

@@ -27,6 +27,28 @@ async function postJson(path, body) {
   return res.json();
 }
 
+async function putJson(path, body) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `API ${res.status}`);
+  }
+  return res.json();
+}
+
+async function deleteJson(path) {
+  const res = await fetch(`${BASE}${path}`, { method: 'DELETE' });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `API ${res.status}`);
+  }
+  return res.json();
+}
+
 // ── Team ────────────────────────────────────────────────
 export const api = {
   // Team
@@ -92,6 +114,15 @@ export const api = {
   sendGhostingAlerts: () => postJson('/notifications/send/ghosting', {}),
   sendBlockerAlerts: (severity) => postJson(`/notifications/send/blockers${severity ? `?severity=${severity}` : ''}`, {}),
   sendHealthSummary: () => postJson('/notifications/send/health', {}),
+
+  // Checkpoints / Task Allocation
+  getCheckpoints: () => fetchJson('/checkpoints'),
+  getCheckpoint: (id) => fetchJson(`/checkpoints/${id}`),
+  createCheckpoint: (data) => postJson('/checkpoints', data),
+  updateCheckpoint: (id, data) => putJson(`/checkpoints/${id}`, data),
+  deleteCheckpoint: (id) => deleteJson(`/checkpoints/${id}`),
+  getMemberCheckpoints: (memberId) => fetchJson(`/checkpoints/member/${memberId}`),
+  getProgressSummary: () => fetchJson('/checkpoints/progress'),
 };
 
 export default api;
