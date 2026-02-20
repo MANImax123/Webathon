@@ -1,0 +1,28 @@
+Problem Statement ID: 3 
+Create your solution for the problem context given below: 
+ 
+Problem Statement Title:  
+Code Style Policeman 
+ 
+Problem Description: 
+When I'm working on a group project, I don't just want to know if my code compiles. 
+I want to know if we're actually making progress, if we're all on the same page, and 
+whether we're building something we'll be proud of when demo day arrives. 
+But most of the time, that bigger picture is fragmented. One teammate is pushing 
+commits at midnight. Another hasn't updated their branch in three days. Someone's 
+stuck on a bug but hasn't mentioned it. The WhatsApp group is full of "I'll do it later" 
+and "wait, who's handling auth?" You check GitHub and see commits, but commits 
+don't tell you the story. You don't know if someone's refactoring the database or just 
+fixing typos. You don't know if that "small feature" mentioned in chat is actually 
+holding up the entire frontend. 
+In fast-moving student projects like hackathons, capstones, semester-long builds, 
+there's no project manager. There are no stand-up meetings. There's just a WhatsApp 
+group, a shared repo, and a lot of assumptions about who's doing what. Over time, 
+this creates chaos like duplicate work, missed deadlines, features that don't integrate, 
+and that sinking feeling two days before the deadline when you realize half the team 
+thought someone else was handling deployment. 
+What student teams need isn't another linter. It's a project command center, a real
+time dashboard that shows progress, surfaces blockers, tracks contributions, and 
+keeps everyone aligned so you can spend less time being confused and more time 
+building something that actually works.
+

@@ -1,0 +1,85 @@
+// ── DevPulse Frontend API Service ────────────────────────
+// Centralised fetch helpers for the Express backend.
+// In development, the Vite proxy (or CORS) forwards to :4000.
+// ─────────────────────────────────────────────────────────
+
+const BASE = import.meta.env.VITE_API_URL || '/api';
+
+async function fetchJson(path) {
+  const res = await fetch(`${BASE}${path}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(body.error || `API ${res.status}`);
+  }
+  return res.json();
+}
+
+async function postJson(path, body) {
+  const res = await fetch(`${BASE}${path}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const data = await res.json().catch(() => ({}));
+    throw new Error(data.error || `API ${res.status}`);
+  }
+  return res.json();
+}
+
+// ── Team ────────────────────────────────────────────────
+export const api = {
+  // Team
+  getTeam: () => fetchJson('/team'),
+  getMember: (id) => fetchJson(`/team/members/${id}`),
+
+  // Health Radar (combined)
+  getHealthRadar: () => fetchJson('/health'),
+  getHealthScore: () => fetchJson('/health/score'),
+  getVelocity: () => fetchJson('/health/velocity'),
+  getContributions: () => fetchJson('/health/contributions'),
+
+  // Active Work Map (combined)
+  getWorkMap: () => fetchJson('/work'),
+  getActiveWork: () => fetchJson('/work/active'),
+  getCommitsByAuthor: (authorId) => fetchJson(`/work/commits/${authorId}`),
+
+  // Blockers (combined)
+  getBlockerDashboard: () => fetchJson('/blockers'),
+  getBlockers: (severity) => fetchJson(`/blockers/list${severity ? `?severity=${severity}` : ''}`),
+  getGhostingAlerts: () => fetchJson('/blockers/ghosting'),
+
+  // Integration Risk
+  getIntegrationRisks: () => fetchJson('/integration'),
+  getModuleRisk: (mod) => fetchJson(`/integration/${encodeURIComponent(mod)}`),
+
+  // Bus Factor
+  getBusFactor: () => fetchJson('/busfactor'),
+  getCriticalModules: (threshold) => fetchJson(`/busfactor/critical${threshold ? `?threshold=${threshold}` : ''}`),
+
+  // Simulation
+  getSimulationDashboard: () => fetchJson('/simulation'),
+  getScenarios: () => fetchJson('/simulation/scenarios'),
+  runSimulation: (scenarioId) => fetchJson(`/simulation/run/${scenarioId}`),
+
+  // AI Advisor
+  askAdvisor: (question) => postJson('/advisor/ask', { question }),
+  getAdvisorSuggestions: () => fetchJson('/advisor/suggestions'),
+
+  // Commits & Honesty
+  getCommits: (params = {}) => {
+    const qs = new URLSearchParams(params).toString();
+    return fetchJson(`/commits${qs ? `?${qs}` : ''}`);
+  },
+  getCommitById: (id) => fetchJson(`/commits/${id}`),
+  getHonestyAnalysis: () => fetchJson('/commits/honesty'),
+  getCommitHonestyPage: () => fetchJson('/commits/honesty-page'),
+
+  // GitHub Connection
+  getGithubStatus: () => fetchJson('/github/status'),
+  connectGithub: (token, owner, repo) => postJson('/github/connect', { token, owner, repo }),
+  syncGithub: () => postJson('/github/sync', {}),
+  disconnectGithub: () => postJson('/github/disconnect', {}),
+};
+
+export default api;
