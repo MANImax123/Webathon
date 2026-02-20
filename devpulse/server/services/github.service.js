@@ -9,15 +9,15 @@ class GitHubService {
   constructor() {
     this.token = process.env.GITHUB_TOKEN || null;
     this.owner = process.env.GITHUB_OWNER || null;
-    this.repo  = process.env.GITHUB_REPO  || null;
+    this.repo = process.env.GITHUB_REPO || null;
     this.syncedAt = null;
-    this.syncing  = false;
+    this.syncing = false;
     this.rateLimit = { remaining: null, limit: null, reset: null };
 
     // Authenticated user info
-    this.user       = null;   // { login, name, avatar_url, ... }
+    this.user = null;   // { login, name, avatar_url, ... }
     this.permission = null;   // 'admin' | 'write' | 'read' | 'none'
-    this.isLead     = false;  // true if admin (repo owner/org admin)
+    this.isLead = false;  // true if admin (repo owner/org admin)
   }
 
   /* ── State helpers ─────────────────────────────────── */
@@ -26,33 +26,33 @@ class GitHubService {
   get status() {
     return {
       connected: this.isConfigured,
-      owner:     this.owner,
-      repo:      this.repo,
-      synced:    !!this.syncedAt,
-      syncedAt:  this.syncedAt,
-      syncing:   this.syncing,
+      owner: this.owner,
+      repo: this.repo,
+      synced: !!this.syncedAt,
+      syncedAt: this.syncedAt,
+      syncing: this.syncing,
       rateLimit: this.rateLimit,
-      user:      this.user ? { login: this.user.login, name: this.user.name, avatar: this.user.avatar_url } : null,
+      user: this.user ? { login: this.user.login, name: this.user.name, avatar: this.user.avatar_url } : null,
       permission: this.permission,
-      isLead:    this.isLead,
+      isLead: this.isLead,
     };
   }
 
   configure({ token, owner, repo }) {
     if (token) this.token = token;
     if (owner) this.owner = owner;
-    if (repo)  this.repo  = repo;
+    if (repo) this.repo = repo;
   }
 
   disconnect() {
-    this.token      = null;
-    this.owner      = null;
-    this.repo       = null;
-    this.syncedAt   = null;
-    this.syncing    = false;
-    this.user       = null;
+    this.token = null;
+    this.owner = null;
+    this.repo = null;
+    this.syncedAt = null;
+    this.syncing = false;
+    this.user = null;
     this.permission = null;
-    this.isLead     = false;
+    this.isLead = false;
   }
 
   /* ── Internal request helper ───────────────────────── */
@@ -67,8 +67,8 @@ class GitHubService {
     });
 
     const headers = {
-      Accept:                 'application/vnd.github+json',
-      'User-Agent':           'DevPulse/1.0',
+      Accept: 'application/vnd.github+json',
+      'User-Agent': 'DevPulse/1.0',
       'X-GitHub-Api-Version': '2022-11-28',
     };
     if (this.token) headers.Authorization = `Bearer ${this.token}`;
@@ -78,8 +78,8 @@ class GitHubService {
     // Track rate-limit
     this.rateLimit = {
       remaining: Number(res.headers.get('x-ratelimit-remaining')),
-      limit:     Number(res.headers.get('x-ratelimit-limit')),
-      reset:     Number(res.headers.get('x-ratelimit-reset')),
+      limit: Number(res.headers.get('x-ratelimit-limit')),
+      reset: Number(res.headers.get('x-ratelimit-reset')),
     };
 
     if (res.status === 202) return null;          // stats still computing
@@ -157,7 +157,7 @@ class GitHubService {
       // "admin" or "write" → they are explicitly a collaborator
       if (perm === 'admin' || perm === 'write') {
         this.permission = perm;
-        this.isLead     = perm === 'admin';
+        this.isLead = perm === 'admin';
         return perm;
       }
       // "read" on a public repo means NOTHING — fall through
@@ -168,7 +168,7 @@ class GitHubService {
     // ── 2. Repo owner check ─────────────────────────────
     if (login === this.owner.toLowerCase()) {
       this.permission = 'admin';
-      this.isLead     = true;
+      this.isLead = true;
       return 'admin';
     }
 
@@ -182,7 +182,7 @@ class GitHubService {
       );
       if (isContrib) {
         this.permission = 'contributor';
-        this.isLead     = false;
+        this.isLead = false;
         return 'contributor';
       }
     } catch {
@@ -191,7 +191,7 @@ class GitHubService {
 
     // ── 4. Not a collaborator or contributor ────────────
     this.permission = 'none';
-    this.isLead     = false;
+    this.isLead = false;
     return 'none';
   }
 
@@ -236,13 +236,48 @@ class GitHubService {
     };
   }
 
+  /* ── Collaborator email lookup ───────────────────── */
+
+  /**
+   * Fetch collaborator emails from GitHub profiles.
+   * GitHub only exposes emails that users have set as public,
+   * so some may return null.
+   */
+  async getCollaboratorEmails() {
+    const contributors = await this.getContributors();
+    if (!contributors || contributors.length === 0) return [];
+
+    const emails = [];
+    for (const c of contributors.slice(0, 30)) {
+      try {
+        const profile = await this._rawReq(`/users/${c.login}`);
+        emails.push({
+          login: c.login,
+          name: profile.name || c.login,
+          avatar: profile.avatar_url,
+          email: profile.email || null,       // null if private
+          contributions: c.contributions,
+        });
+      } catch {
+        emails.push({
+          login: c.login,
+          name: c.login,
+          avatar: c.avatar_url,
+          email: null,
+          contributions: c.contributions,
+        });
+      }
+    }
+    return emails;
+  }
+
   /* ── Public API methods ────────────────────────────── */
-  getRepo()             { return this._req(`/repos/${this.owner}/${this.repo}`); }
-  getCommits(page = 1)  { return this._req(`/repos/${this.owner}/${this.repo}/commits`, { page, per_page: 100 }); }
-  getCommitDetail(sha)  { return this._req(`/repos/${this.owner}/${this.repo}/commits/${sha}`); }
-  getBranches()         { return this._req(`/repos/${this.owner}/${this.repo}/branches`, { per_page: 100 }); }
-  getPulls(state='all') { return this._req(`/repos/${this.owner}/${this.repo}/pulls`, { state, per_page: 100 }); }
-  getContributors()     { return this._req(`/repos/${this.owner}/${this.repo}/contributors`, { per_page: 100 }); }
+  getRepo() { return this._req(`/repos/${this.owner}/${this.repo}`); }
+  getCommits(page = 1) { return this._req(`/repos/${this.owner}/${this.repo}/commits`, { page, per_page: 100 }); }
+  getCommitDetail(sha) { return this._req(`/repos/${this.owner}/${this.repo}/commits/${sha}`); }
+  getBranches() { return this._req(`/repos/${this.owner}/${this.repo}/branches`, { per_page: 100 }); }
+  getPulls(state = 'all') { return this._req(`/repos/${this.owner}/${this.repo}/pulls`, { state, per_page: 100 }); }
+  getContributors() { return this._req(`/repos/${this.owner}/${this.repo}/contributors`, { per_page: 100 }); }
 
   /** Stats endpoint may return 202 while GitHub computes; retries up to 4× */
   async getContributorStats() {

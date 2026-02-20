@@ -11,10 +11,10 @@ export let TEAM = {
   createdAt: '2026-02-06T10:00:00Z',
   deadline: '2026-02-22T18:00:00Z',
   members: [
-    { id: 'u1', name: 'Manit', avatar: 'M', role: 'Full Stack Lead', color: '#3b82f6' },
-    { id: 'u2', name: 'Ravi', avatar: 'R', role: 'Backend Developer', color: '#10b981' },
-    { id: 'u3', name: 'Priya', avatar: 'P', role: 'Frontend Developer', color: '#8b5cf6' },
-    { id: 'u4', name: 'Akshith', avatar: 'A', role: 'DevOps / AI', color: '#f59e0b' },
+    { id: 'u1', name: 'Manit', avatar: 'M', role: 'Full Stack Lead', color: '#3b82f6', email: 'manit@example.com' },
+    { id: 'u2', name: 'Ravi', avatar: 'R', role: 'Backend Developer', color: '#10b981', email: 'ravi@example.com' },
+    { id: 'u3', name: 'Priya', avatar: 'P', role: 'Frontend Developer', color: '#8b5cf6', email: 'priya@example.com' },
+    { id: 'u4', name: 'Akshith', avatar: 'A', role: 'DevOps / AI', color: '#f59e0b', email: 'akshith@example.com' },
   ],
 };
 
@@ -191,40 +191,40 @@ const _DEFAULTS = {
  * Because these are `export let`, importers see updated values via live bindings.
  */
 export function updateStore(data) {
-  if (data.TEAM)                 TEAM                 = data.TEAM;
-  if (data.COMMITS)              COMMITS              = data.COMMITS;
-  if (data.BRANCHES)             BRANCHES             = data.BRANCHES;
-  if (data.PULL_REQUESTS)        PULL_REQUESTS        = data.PULL_REQUESTS;
-  if (data.HEALTH_SCORE)         HEALTH_SCORE         = data.HEALTH_SCORE;
-  if (data.VELOCITY_DATA)        VELOCITY_DATA        = data.VELOCITY_DATA;
-  if (data.ACTIVE_WORK)          ACTIVE_WORK          = data.ACTIVE_WORK;
-  if (data.BLOCKERS)             BLOCKERS             = data.BLOCKERS;
-  if (data.GHOSTING_ALERTS)      GHOSTING_ALERTS      = data.GHOSTING_ALERTS;
-  if (data.INTEGRATION_RISKS)    INTEGRATION_RISKS    = data.INTEGRATION_RISKS;
-  if (data.BUS_FACTOR)           BUS_FACTOR           = data.BUS_FACTOR;
+  if (data.TEAM) TEAM = data.TEAM;
+  if (data.COMMITS) COMMITS = data.COMMITS;
+  if (data.BRANCHES) BRANCHES = data.BRANCHES;
+  if (data.PULL_REQUESTS) PULL_REQUESTS = data.PULL_REQUESTS;
+  if (data.HEALTH_SCORE) HEALTH_SCORE = data.HEALTH_SCORE;
+  if (data.VELOCITY_DATA) VELOCITY_DATA = data.VELOCITY_DATA;
+  if (data.ACTIVE_WORK) ACTIVE_WORK = data.ACTIVE_WORK;
+  if (data.BLOCKERS) BLOCKERS = data.BLOCKERS;
+  if (data.GHOSTING_ALERTS) GHOSTING_ALERTS = data.GHOSTING_ALERTS;
+  if (data.INTEGRATION_RISKS) INTEGRATION_RISKS = data.INTEGRATION_RISKS;
+  if (data.BUS_FACTOR) BUS_FACTOR = data.BUS_FACTOR;
   if (data.SIMULATION_SCENARIOS) SIMULATION_SCENARIOS = data.SIMULATION_SCENARIOS;
-  if (data.COMMIT_HONESTY)       COMMIT_HONESTY       = data.COMMIT_HONESTY;
+  if (data.COMMIT_HONESTY) COMMIT_HONESTY = data.COMMIT_HONESTY;
   if (data.AI_ADVISOR_RESPONSES) AI_ADVISOR_RESPONSES = data.AI_ADVISOR_RESPONSES;
-  if (data.CONTRIBUTION_STATS)   CONTRIBUTION_STATS   = data.CONTRIBUTION_STATS;
-  if (data.CHECKPOINTS)          CHECKPOINTS          = data.CHECKPOINTS;
+  if (data.CONTRIBUTION_STATS) CONTRIBUTION_STATS = data.CONTRIBUTION_STATS;
+  if (data.CHECKPOINTS) CHECKPOINTS = data.CHECKPOINTS;
 }
 
 /** Restore all values to the original demo data */
 export function restoreDefaults() {
-  TEAM                 = _DEFAULTS.TEAM;
-  COMMITS              = _DEFAULTS.COMMITS;
-  BRANCHES             = _DEFAULTS.BRANCHES;
-  PULL_REQUESTS        = _DEFAULTS.PULL_REQUESTS;
-  HEALTH_SCORE         = _DEFAULTS.HEALTH_SCORE;
-  VELOCITY_DATA        = _DEFAULTS.VELOCITY_DATA;
-  ACTIVE_WORK          = _DEFAULTS.ACTIVE_WORK;
-  BLOCKERS             = _DEFAULTS.BLOCKERS;
-  GHOSTING_ALERTS      = _DEFAULTS.GHOSTING_ALERTS;
-  INTEGRATION_RISKS    = _DEFAULTS.INTEGRATION_RISKS;
-  BUS_FACTOR           = _DEFAULTS.BUS_FACTOR;
+  TEAM = _DEFAULTS.TEAM;
+  COMMITS = _DEFAULTS.COMMITS;
+  BRANCHES = _DEFAULTS.BRANCHES;
+  PULL_REQUESTS = _DEFAULTS.PULL_REQUESTS;
+  HEALTH_SCORE = _DEFAULTS.HEALTH_SCORE;
+  VELOCITY_DATA = _DEFAULTS.VELOCITY_DATA;
+  ACTIVE_WORK = _DEFAULTS.ACTIVE_WORK;
+  BLOCKERS = _DEFAULTS.BLOCKERS;
+  GHOSTING_ALERTS = _DEFAULTS.GHOSTING_ALERTS;
+  INTEGRATION_RISKS = _DEFAULTS.INTEGRATION_RISKS;
+  BUS_FACTOR = _DEFAULTS.BUS_FACTOR;
   SIMULATION_SCENARIOS = _DEFAULTS.SIMULATION_SCENARIOS;
-  COMMIT_HONESTY       = _DEFAULTS.COMMIT_HONESTY;
+  COMMIT_HONESTY = _DEFAULTS.COMMIT_HONESTY;
   AI_ADVISOR_RESPONSES = _DEFAULTS.AI_ADVISOR_RESPONSES;
-  CONTRIBUTION_STATS   = _DEFAULTS.CONTRIBUTION_STATS;
-  CHECKPOINTS          = _DEFAULTS.CHECKPOINTS;
+  CONTRIBUTION_STATS = _DEFAULTS.CONTRIBUTION_STATS;
+  CHECKPOINTS = _DEFAULTS.CHECKPOINTS;
 }

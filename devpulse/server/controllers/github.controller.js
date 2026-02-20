@@ -6,11 +6,41 @@
 
 import github from '../services/github.service.js';
 import { syncFromGitHub } from '../services/analytics.service.js';
-import { restoreDefaults } from '../data/store.js';
+import { restoreDefaults, TEAM } from '../data/store.js';
 
 /** GET /api/github/status */
 export const getStatus = (_req, res) => {
   res.json(github.status);
+};
+
+/** GET /api/github/emails — collaborator emails (lead only) */
+export const getCollaboratorEmails = async (_req, res) => {
+  try {
+    // If connected to GitHub, fetch from API
+    if (github.isConfigured && github.token) {
+      // Only lead can see emails
+      if (!github.isLead) {
+        return res.status(403).json({ error: 'Only the lead can view collaborator emails' });
+      }
+      const emails = await github.getCollaboratorEmails();
+      return res.json({ source: 'github', collaborators: emails });
+    }
+
+    // Demo mode: return team store emails
+    const members = TEAM?.members || [];
+    return res.json({
+      source: 'demo',
+      collaborators: members.map(m => ({
+        login: m.id,
+        name: m.name,
+        avatar: m.avatar,
+        email: m.email || null,
+        role: m.role,
+      })),
+    });
+  } catch (err) {
+    res.status(err.status || 500).json({ error: err.message });
+  }
 };
 
 /** POST /api/github/connect  body: { token?, owner, repo } */
@@ -64,3 +94,4 @@ export const disconnect = (_req, res) => {
   restoreDefaults();
   res.json({ status: 'disconnected' });
 };
+
