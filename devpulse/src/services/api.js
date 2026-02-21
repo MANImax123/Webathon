@@ -144,6 +144,10 @@ export const api = {
   createCalendarEvent: (data) => postJson('/calendar/create-event', data),
   getCalendarEvents: () => fetchJson('/calendar/events'),
   disconnectCalendar: () => postJson('/calendar/disconnect', {}),
+
+  // Semantic Search
+  semanticSearch: (query, filters) => postJson('/search/semantic', { query, filters }),
+  getSearchSuggestions: () => fetchJson('/search/suggestions'),
 };
 
 export default api;

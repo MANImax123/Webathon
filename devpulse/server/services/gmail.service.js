@@ -206,6 +206,17 @@ class GmailService {
     const prioColor = priorityColors[checkpoint.priority] || '#3b82f6';
     const deadlineStr = deadline.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
+    // Generate Google Calendar URL for the email button
+    const formatGCalDate = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+    const gcalParams = new URLSearchParams({
+      action: 'TEMPLATE',
+      text: `📋 ${checkpoint.title}`,
+      dates: `${formatGCalDate(deadline)}/${formatGCalDate(new Date(deadline.getTime() + 3600000))}`,
+      details: `${checkpoint.description || 'No description'}\n\nPriority: ${checkpoint.priority}\nAssigned by: ${checkpoint.createdBy || 'Lead'}\n\n— Added via DevPulse`,
+      sf: 'true',
+    });
+    const googleCalUrl = `https://calendar.google.com/calendar/render?${gcalParams.toString()}`;
+
     const subject = `📅 New Task Assigned: ${checkpoint.title} — ${teamName}`;
     const html = `
       <div style="font-family:system-ui,sans-serif;max-width:560px;margin:0 auto;background:#1a1a2e;color:#e5e5e5;border-radius:12px;overflow:hidden">
@@ -230,8 +241,11 @@ class GmailService {
               <td style="padding:8px 0;font-weight:600">${checkpoint.assigneeName || 'You'}</td>
             </tr>
           </table>
-          <div style="margin-top:20px;padding:14px;background:#151525;border-radius:8px;text-align:center">
-            <p style="margin:0;color:#888;font-size:12px">📅 A calendar invite (.ics) is attached — open it to add this deadline to your calendar with automatic reminders!</p>
+          <div style="margin-top:20px;text-align:center">
+            <a href="${googleCalUrl}" target="_blank" style="display:inline-block;background:#10b981;color:#fff;padding:12px 28px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none">📅 Add to Google Calendar</a>
+          </div>
+          <div style="margin-top:16px;padding:14px;background:#151525;border-radius:8px;text-align:center">
+            <p style="margin:0;color:#888;font-size:12px">You can also open the attached .ics file to add this event to any calendar app.</p>
           </div>
         </div>
         <div style="padding:16px 28px;background:#151525;font-size:12px;color:#666;text-align:center">

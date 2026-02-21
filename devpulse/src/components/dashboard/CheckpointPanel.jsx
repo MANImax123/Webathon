@@ -3,10 +3,28 @@ import {
   CheckCircle2, Clock, AlertTriangle, Plus, Trash2, Edit3,
   Target, User, Calendar, ChevronDown, ChevronUp, BarChart3,
   Flag, Loader2, Save, X, Mail, Copy, Check, Bell, CalendarDays,
-  List, ChevronLeft, ChevronRight, BellRing, GitBranch,
+  List, ChevronLeft, ChevronRight, BellRing, GitBranch, ExternalLink,
 } from 'lucide-react';
 import useApi from '../../hooks/useApi';
 import api from '../../services/api';
+
+/* ── Google Calendar URL Generator ──────────────────────── */
+function generateGoogleCalUrl(cp) {
+  const deadline = new Date(cp.deadline);
+  const endTime = new Date(deadline.getTime() + 3600000); // 1 hour event
+
+  const formatGCalDate = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `📋 ${cp.title}`,
+    dates: `${formatGCalDate(deadline)}/${formatGCalDate(endTime)}`,
+    details: `${cp.description || 'No description'}\n\nPriority: ${cp.priority}\nAssigned to: ${cp.assigneeName || 'Team Member'}\nCreated by: ${cp.createdBy || 'Lead'}\n\n— Added via DevPulse`,
+    sf: 'true',
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
 
 const PRIORITY_COLORS = {
   critical: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/30', dot: 'bg-red-400' },
@@ -159,11 +177,6 @@ function CreateCheckpointForm({ members, onCreated, onCancel }) {
       <div className="flex items-center gap-3 text-xs text-muted-foreground bg-blue-500/5 border border-blue-500/10 rounded-xl px-4 py-2.5">
         <CalendarDays size={14} className="text-blue-400 flex-shrink-0" />
         <span>Task will be added to the assignee's <strong className="text-foreground">Google Calendar</strong> with reminders (1 hr &amp; 1 day before). If Gmail is configured, a calendar invite email is also sent.</span>
-      </div>
-
-      <div className="flex items-center gap-3 text-xs text-muted-foreground bg-green-500/5 border border-green-500/10 rounded-xl px-4 py-2.5">
-        <Calendar size={14} className="text-green-400 flex-shrink-0" />
-        <span>If Google Calendar is configured, a <strong className="text-foreground">Google Calendar event</strong> will be created and all collaborator emails (fetched via GitHub API) will be invited automatically.</span>
       </div>
 
       <div className="flex items-center gap-3 text-xs text-muted-foreground bg-green-500/5 border border-green-500/10 rounded-xl px-4 py-2.5">
@@ -341,6 +354,18 @@ function CheckpointCard({ cp, isLead, onUpdate, onDelete }) {
               <Edit3 size={12} /> Update Status
             </button>
           )}
+
+          {/* Add to Google Calendar */}
+          <a
+            href={generateGoogleCalUrl(cp)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 px-3 py-1.5 rounded-lg transition-colors border border-emerald-500/20"
+          >
+            <CalendarDays size={12} />
+            Add to Google Calendar
+            <ExternalLink size={10} />
+          </a>
 
           <div className="text-xs text-muted-foreground">
             Created {new Date(cp.createdAt).toLocaleDateString()}
@@ -547,10 +572,17 @@ function CalendarView({ checkpoints }) {
               </div>
               <div className="space-y-0.5 overflow-hidden">
                 {dayCps.slice(0, 2).map((cp) => (
-                  <div key={cp.id} className="flex items-center gap-1" title={`${cp.title} — ${cp.assigneeName}`}>
+                  <a
+                    key={cp.id}
+                    href={generateGoogleCalUrl(cp)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 hover:bg-blue-500/10 rounded px-0.5 -mx-0.5 transition-colors cursor-pointer"
+                    title={`📅 Click to add "${cp.title}" to Google Calendar — Assigned to ${cp.assigneeName}`}
+                  >
                     <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusDot(cp.status)}`} />
                     <span className="text-[10px] text-foreground truncate leading-tight">{cp.title}</span>
-                  </div>
+                  </a>
                 ))}
                 {dayCps.length > 2 && (
                   <span className="text-[10px] text-muted-foreground">+{dayCps.length - 2} more</span>

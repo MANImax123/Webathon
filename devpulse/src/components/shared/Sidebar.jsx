@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import {
   Activity, AlertTriangle, GitBranch, BarChart3, Shield,
   Users, Cpu, ChevronLeft, ChevronRight,
-  Home, GitCommit, Bot, SlidersHorizontal, Github, Target
+  Home, GitCommit, Bot, SlidersHorizontal, Github, Target, Search
 } from 'lucide-react';
 import AnimatedLogo from './AnimatedLogo';
 
@@ -21,6 +21,7 @@ const DASHBOARD_SECTIONS = [
   { id: 'busfactor', label: 'Bus Factor', icon: Shield, color: 'violet' },
   { id: 'simulation', label: 'Simulation', icon: SlidersHorizontal, color: 'cyan' },
   { id: 'advisor', label: 'AI Advisor', icon: Bot, color: 'blue' },
+  { id: 'search', label: 'Semantic Search', icon: Search, color: 'cyan' },
   { id: 'checkpoints', label: 'Checkpoints', icon: Target, color: 'emerald' },
 ];
 
@@ -30,9 +31,8 @@ export default function Sidebar({ activeSection, onSectionChange }) {
 
   return (
     <aside
-      className={`fixed left-0 top-0 h-screen z-40 flex flex-col transition-all duration-300 ${
-        collapsed ? 'w-[68px]' : 'w-64'
-      } bg-sidebar border-r border-sidebar-border`}
+      className={`fixed left-0 top-0 h-screen z-40 flex flex-col transition-all duration-300 ${collapsed ? 'w-[68px]' : 'w-64'
+        } bg-sidebar border-r border-sidebar-border`}
     >
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-16 border-b border-sidebar-border">
@@ -60,11 +60,10 @@ export default function Sidebar({ activeSection, onSectionChange }) {
             <Link
               key={item.id}
               to={item.path}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${
-                isActive
-                  ? 'bg-sidebar-accent text-sidebar-accent-foreground border border-blue-500/20'
-                  : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 border border-transparent'
-              }`}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group ${isActive
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground border border-blue-500/20'
+                : 'text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent/50 border border-transparent'
+                }`}
             >
               <Icon size={20} className={isActive ? 'text-blue-400' : 'text-muted-foreground group-hover:text-sidebar-foreground'} />
               {!collapsed && <span className="text-lg font-medium">{item.label}</span>}
@@ -87,11 +86,10 @@ export default function Sidebar({ activeSection, onSectionChange }) {
                 <button
                   key={section.id}
                   onClick={() => onSectionChange(section.id)}
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group ${
-                    isActive
-                      ? 'bg-sidebar-accent text-sidebar-accent-foreground'
-                      : 'text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-sidebar-accent/30'
-                  }`}
+                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl transition-all duration-200 group ${isActive
+                    ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                    : 'text-sidebar-foreground/50 hover:text-sidebar-foreground/80 hover:bg-sidebar-accent/30'
+                    }`}
                 >
                   <Icon size={20} className={isActive ? 'text-blue-400' : 'text-muted-foreground group-hover:text-sidebar-foreground/70'} />
                   {!collapsed && <span className="text-base font-medium">{section.label}</span>}

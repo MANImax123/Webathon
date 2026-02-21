@@ -9,6 +9,7 @@ import BusFactorHeatmap from '../components/dashboard/BusFactorHeatmap';
 import SimulationPanel from '../components/dashboard/SimulationPanel';
 import AIAdvisor from '../components/dashboard/AIAdvisor';
 import CheckpointPanel from '../components/dashboard/CheckpointPanel';
+import SemanticSearch from '../components/dashboard/SemanticSearch';
 
 const SECTIONS = {
   health: { title: 'Health Radar', subtitle: 'Overall project health and team velocity', component: HealthRadar },
@@ -18,6 +19,7 @@ const SECTIONS = {
   busfactor: { title: 'Bus Factor Heatmap', subtitle: 'Knowledge concentration risk per module', component: BusFactorHeatmap },
   simulation: { title: 'Delivery Risk Simulator', subtitle: 'Predict future project health with what-if scenarios', component: SimulationPanel },
   advisor: { title: 'AI Project Advisor', subtitle: 'Ask questions about your project status', component: AIAdvisor },
+  search: { title: 'Semantic Search', subtitle: 'AI-powered search across your entire workspace', component: SemanticSearch },
   checkpoints: { title: 'Checkpoints & Tasks', subtitle: 'Allocate work, set deadlines, and monitor collaborator progress', component: CheckpointPanel },
 };
 
@@ -35,10 +37,10 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background">
       <div className="grid-background" />
       <Sidebar activeSection={activeSection} onSectionChange={handleSectionChange} />
-      
+
       <div className="ml-64">
         <Navbar />
-        
+
         <main className="p-6 lg:p-8">
           {/* Section Header */}
           <div className="mb-8">
