@@ -4,6 +4,43 @@
 // For now, identical data to what frontend had, served via API.
 // ============================================================
 
+import { writeFileSync, readFileSync, existsSync, unlinkSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const CHECKPOINT_FILE = join(__dirname, 'checkpoints.json');
+
+function loadPersistedCheckpoints() {
+  try {
+    if (existsSync(CHECKPOINT_FILE)) {
+      const data = JSON.parse(readFileSync(CHECKPOINT_FILE, 'utf-8'));
+      if (Array.isArray(data) && data.length > 0) {
+        console.log(`\u{1F4C2} Loaded ${data.length} checkpoints from disk`);
+        return data;
+      }
+    }
+  } catch (err) {
+    console.warn('Could not load persisted checkpoints:', err.message);
+  }
+  return null;
+}
+
+function persistCheckpoints(checkpoints) {
+  try {
+    writeFileSync(CHECKPOINT_FILE, JSON.stringify(checkpoints, null, 2));
+  } catch (err) {
+    console.warn('Could not persist checkpoints:', err.message);
+  }
+}
+
+function clearPersistedCheckpoints() {
+  try {
+    if (existsSync(CHECKPOINT_FILE)) unlinkSync(CHECKPOINT_FILE);
+  } catch { /* ignore */ }
+}
+
 export let TEAM = {
   name: 'StudyBuddy',
   repo: 'team-alpha/studybuddy',
@@ -138,7 +175,7 @@ export let AI_ADVISOR_RESPONSES = {
 
 // ── Checkpoints / Task Allocation ─────────────────────────
 // The repo lead allocates tasks to collaborators with deadlines
-export let CHECKPOINTS = [
+const CHECKPOINT_SEED = [
   { id: 'cp1', title: 'Complete user auth flow', description: 'Implement login, signup, JWT refresh, and session management', assignee: 'u1', assigneeName: 'Manit', priority: 'high', status: 'completed', deadline: '2026-02-12T18:00:00Z', createdAt: '2026-02-06T10:00:00Z', completedAt: '2026-02-12T09:00:00Z', createdBy: 'lead', progress: 100 },
   { id: 'cp2', title: 'Database schema & migration', description: 'Design and implement MongoDB schemas for users, groups, sessions', assignee: 'u2', assigneeName: 'Ravi', priority: 'critical', status: 'overdue', deadline: '2026-02-15T18:00:00Z', createdAt: '2026-02-06T10:00:00Z', completedAt: null, createdBy: 'lead', progress: 40 },
   { id: 'cp3', title: 'Dashboard UI components', description: 'Build all dashboard panels including sidebar, navbar, and card components', assignee: 'u3', assigneeName: 'Priya', priority: 'high', status: 'in-progress', deadline: '2026-02-20T18:00:00Z', createdAt: '2026-02-08T10:00:00Z', completedAt: null, createdBy: 'lead', progress: 65 },
@@ -147,13 +184,16 @@ export let CHECKPOINTS = [
   { id: 'cp6', title: 'Study group CRUD API', description: 'Build REST endpoints for creating, reading, updating, and deleting study groups', assignee: 'u2', assigneeName: 'Ravi', priority: 'high', status: 'overdue', deadline: '2026-02-14T18:00:00Z', createdAt: '2026-02-08T10:00:00Z', completedAt: null, createdBy: 'lead', progress: 25 },
 ];
 
+// Load from persisted file so checkpoint statuses survive server restarts / merges
+export let CHECKPOINTS = loadPersistedCheckpoints() || CHECKPOINT_SEED;
+
 // ── Snapshot of original demo data (taken once at import time) ──
 const _DEFAULTS = {
   TEAM, COMMITS, BRANCHES, PULL_REQUESTS,
   ACTIVE_WORK,
   BLOCKERS, GHOSTING_ALERTS, INTEGRATION_RISKS,
   BUS_FACTOR, SIMULATION_SCENARIOS, COMMIT_HONESTY,
-  AI_ADVISOR_RESPONSES, CHECKPOINTS,
+  AI_ADVISOR_RESPONSES, CHECKPOINTS: CHECKPOINT_SEED,
 };
 
 /**
@@ -173,7 +213,7 @@ export function updateStore(data) {
   if (data.SIMULATION_SCENARIOS) SIMULATION_SCENARIOS = data.SIMULATION_SCENARIOS;
   if (data.COMMIT_HONESTY) COMMIT_HONESTY = data.COMMIT_HONESTY;
   if (data.AI_ADVISOR_RESPONSES) AI_ADVISOR_RESPONSES = data.AI_ADVISOR_RESPONSES;
-  if (data.CHECKPOINTS) CHECKPOINTS = data.CHECKPOINTS;
+  if (data.CHECKPOINTS) { CHECKPOINTS = data.CHECKPOINTS; persistCheckpoints(CHECKPOINTS); }
 }
 
 /** Restore all values to the original demo data */
@@ -191,4 +231,5 @@ export function restoreDefaults() {
   COMMIT_HONESTY = _DEFAULTS.COMMIT_HONESTY;
   AI_ADVISOR_RESPONSES = _DEFAULTS.AI_ADVISOR_RESPONSES;
   CHECKPOINTS = _DEFAULTS.CHECKPOINTS;
+  clearPersistedCheckpoints();
 }
