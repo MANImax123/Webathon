@@ -6,13 +6,14 @@
 import discord from '../services/discord.service.js';
 import gmail from '../services/gmail.service.js';
 import googleCalendar from '../services/google-calendar.service.js';
-import { GHOSTING_ALERTS, BLOCKERS, HEALTH_SCORE, TEAM } from '../data/store.js';
+import { GHOSTING_ALERTS, BLOCKERS, TEAM } from '../data/store.js';
+import { computeHealthScore } from '../services/metrics.service.js';
 
 /* ── Status ────────────────────────────────────────── */
 export const getStatus = (_req, res) => {
   res.json({
     discord: discord.status,
-    gmail:   gmail.status,
+    gmail: gmail.status,
     googleCalendar: googleCalendar.status,
   });
 };
@@ -166,13 +167,14 @@ export const sendBlockerAlerts = async (req, res) => {
 /* ── Send health summary ─────────────────────────────── */
 export const sendHealthSummary = async (_req, res) => {
   const results = { discord: false, gmail: false, errors: [] };
+  const liveHealth = computeHealthScore();
 
   if (discord.enabled) {
-    try { await discord.sendHealthSummary(HEALTH_SCORE, TEAM); results.discord = true; }
+    try { await discord.sendHealthSummary(liveHealth, TEAM); results.discord = true; }
     catch (err) { results.errors.push({ channel: 'discord', error: err.message }); }
   }
   if (gmail.enabled) {
-    try { await gmail.sendHealthSummary(HEALTH_SCORE, TEAM); results.gmail = true; }
+    try { await gmail.sendHealthSummary(liveHealth, TEAM); results.gmail = true; }
     catch (err) { results.errors.push({ channel: 'gmail', error: err.message }); }
   }
 

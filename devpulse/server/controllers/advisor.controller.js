@@ -1,10 +1,14 @@
 import * as store from '../data/store.js';
+import * as metricsService from '../services/metrics.service.js';
 import github from '../services/github.service.js';
+
+// Helper: returns metrics functions (avoids circular import issues)
+const require_metrics = () => metricsService;
 
 /* ── OpenRouter setup ─────────────────────────────────── */
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
 const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'google/gemma-3-12b-it:free';
-const OPENROUTER_KEY   = process.env.OPENROUTER_API_KEY;
+const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
 const aiEnabled = Boolean(OPENROUTER_KEY && OPENROUTER_KEY !== 'PASTE_YOUR_OPENROUTER_API_KEY_HERE');
 if (aiEnabled) {
   console.log(`🧠 OpenRouter AI initialized (${OPENROUTER_MODEL}) for AI Advisor`);
@@ -46,7 +50,11 @@ async function callOpenRouter(systemPrompt, userMessage) {
 
 /* ── Build rich project context for Gemini ────────────── */
 function buildProjectContext() {
-  const h  = store.HEALTH_SCORE || {};
+  // Import live-computed metrics instead of stale store snapshots
+  const { computeHealthScore, computeVelocity, computeContributions } = require_metrics();
+  const h = computeHealthScore();
+  const cs = computeContributions();
+  const vd = computeVelocity();
   const tm = store.TEAM?.members || [];
   const bl = store.BLOCKERS || [];
   const gh = store.GHOSTING_ALERTS || [];
@@ -54,10 +62,8 @@ function buildProjectContext() {
   const pr = store.PULL_REQUESTS || [];
   const aw = store.ACTIVE_WORK || [];
   const ir = store.INTEGRATION_RISKS || [];
-  const cs = store.CONTRIBUTION_STATS || [];
   const ch = store.COMMIT_HONESTY || [];
   const cp = store.CHECKPOINTS || [];
-  const vd = store.VELOCITY_DATA || [];
 
   return `
 === DEVPULSE PROJECT DATA (live) ===

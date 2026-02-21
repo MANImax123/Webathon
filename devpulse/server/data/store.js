@@ -11,10 +11,10 @@ export let TEAM = {
   createdAt: '2026-02-06T10:00:00Z',
   deadline: '2026-02-22T18:00:00Z',
   members: [
-    { id: 'u1', name: 'Manit', avatar: 'M', role: 'Full Stack Lead', color: '#3b82f6', email: 'manit@example.com' },
-    { id: 'u2', name: 'Ravi', avatar: 'R', role: 'Backend Developer', color: '#10b981', email: 'ravi@example.com' },
-    { id: 'u3', name: 'Priya', avatar: 'P', role: 'Frontend Developer', color: '#8b5cf6', email: 'priya@example.com' },
-    { id: 'u4', name: 'Akshith', avatar: 'A', role: 'DevOps / AI', color: '#f59e0b', email: 'akshith@example.com' },
+    { id: 'u1', name: 'Manit', avatar: 'M', role: 'Full Stack Lead', color: '#3b82f6', email: 'kaushik.phaniharam@gmail.com' },
+    { id: 'u2', name: 'Ravi', avatar: 'R', role: 'Backend Developer', color: '#10b981', email: 'kaushik.phaniharam@gmail.com' },
+    { id: 'u3', name: 'Priya', avatar: 'P', role: 'Frontend Developer', color: '#8b5cf6', email: 'kaushik.phaniharam@gmail.com' },
+    { id: 'u4', name: 'Akshith', avatar: 'A', role: 'DevOps / AI', color: '#f59e0b', email: 'kaushik.phaniharam@gmail.com' },
   ],
 };
 
@@ -64,35 +64,10 @@ export let PULL_REQUESTS = [
   { id: 'pr6', title: 'Notification system', author: 'u1', branch: 'feature/notifications', status: 'open', createdAt: '2026-02-14T11:00:00Z', mergedAt: null, reviewers: [], comments: 1, ageDays: 6 },
 ];
 
-export let HEALTH_SCORE = {
-  overall: 62,
-  trend: [
-    { date: 'Feb 6', score: 85 }, { date: 'Feb 7', score: 88 }, { date: 'Feb 8', score: 82 },
-    { date: 'Feb 9', score: 80 }, { date: 'Feb 10', score: 78 }, { date: 'Feb 11', score: 75 },
-    { date: 'Feb 12', score: 72 }, { date: 'Feb 13', score: 70 }, { date: 'Feb 14', score: 68 },
-    { date: 'Feb 15', score: 65 }, { date: 'Feb 16', score: 64 }, { date: 'Feb 17', score: 63 },
-    { date: 'Feb 18', score: 62 }, { date: 'Feb 19', score: 62 }, { date: 'Feb 20', score: 62 },
-  ],
-  breakdown: { deliveryRisk: 38, integrationRisk: 45, stabilityRisk: 28 },
-};
-
-export let VELOCITY_DATA = [
-  { date: 'Feb 6', Manit: 1, Ravi: 1, Priya: 1, Akshith: 1 },
-  { date: 'Feb 7', Manit: 1, Ravi: 1, Priya: 1, Akshith: 0 },
-  { date: 'Feb 8', Manit: 1, Ravi: 1, Priya: 0, Akshith: 0 },
-  { date: 'Feb 9', Manit: 0, Ravi: 0, Priya: 1, Akshith: 0 },
-  { date: 'Feb 10', Manit: 1, Ravi: 0, Priya: 0, Akshith: 1 },
-  { date: 'Feb 11', Manit: 0, Ravi: 1, Priya: 1, Akshith: 0 },
-  { date: 'Feb 12', Manit: 1, Ravi: 0, Priya: 0, Akshith: 0 },
-  { date: 'Feb 13', Manit: 0, Ravi: 1, Priya: 0, Akshith: 0 },
-  { date: 'Feb 14', Manit: 1, Ravi: 0, Priya: 0, Akshith: 0 },
-  { date: 'Feb 15', Manit: 0, Ravi: 0, Priya: 1, Akshith: 0 },
-  { date: 'Feb 16', Manit: 1, Ravi: 0, Priya: 0, Akshith: 0 },
-  { date: 'Feb 17', Manit: 0, Ravi: 0, Priya: 0, Akshith: 1 },
-  { date: 'Feb 18', Manit: 1, Ravi: 0, Priya: 1, Akshith: 0 },
-  { date: 'Feb 19', Manit: 1, Ravi: 0, Priya: 0, Akshith: 0 },
-  { date: 'Feb 20', Manit: 0, Ravi: 0, Priya: 0, Akshith: 0 },
-];
+// HEALTH_SCORE, VELOCITY_DATA, and CONTRIBUTION_STATS are now computed
+// LIVE by server/services/metrics.service.js on every API request.
+// No hardcoded values needed — they derive from COMMITS, BRANCHES,
+// PULL_REQUESTS, TEAM, and BLOCKERS above.
 
 export let ACTIVE_WORK = [
   { memberId: 'u1', name: 'Manit', status: 'active', currentTask: 'API integration for groups', module: 'frontend', lastCommit: '4 hours ago', branch: 'main' },
@@ -159,12 +134,7 @@ export let AI_ADVISOR_RESPONSES = {
   'default': { response: `**DevPulse Analysis â€” Feb 20, 2026**\n\n**Health Score: 62/100** (declining from 85 two weeks ago)\n\n**Key Issues:**\n1. ðŸ”´ Ravi inactive for 7 days â€” Database module at risk\n2. ðŸ”´ 2 stale PRs blocking integration\n3. ðŸŸ¡ Route mismatch between frontend/backend\n4. ðŸŸ¡ Manit handling 60% of all commits â€” overloaded\n\n**Delivery Risk:** 38% | **Integration Risk:** 45% | **Stability Risk:** 28%\n\n**48-hour forecast:** If no PRs are merged, health drops to ~44. If PR #2 and #5 merge, health recovers to ~74.\n\nAsk me about specific risks, team members, or modules.`, confidence: 85 },
 };
 
-export let CONTRIBUTION_STATS = [
-  { name: 'Manit', commits: 10, additions: 2067, deletions: 181, percentage: 43 },
-  { name: 'Ravi', commits: 5, additions: 588, deletions: 125, percentage: 22 },
-  { name: 'Priya', commits: 5, additions: 983, deletions: 96, percentage: 22 },
-  { name: 'Akshith', commits: 3, additions: 260, deletions: 20, percentage: 13 },
-];
+// CONTRIBUTION_STATS removed — now computed live by metrics.service.js
 
 // ── Checkpoints / Task Allocation ─────────────────────────
 // The repo lead allocates tasks to collaborators with deadlines
@@ -180,10 +150,10 @@ export let CHECKPOINTS = [
 // ── Snapshot of original demo data (taken once at import time) ──
 const _DEFAULTS = {
   TEAM, COMMITS, BRANCHES, PULL_REQUESTS,
-  HEALTH_SCORE, VELOCITY_DATA, ACTIVE_WORK,
+  ACTIVE_WORK,
   BLOCKERS, GHOSTING_ALERTS, INTEGRATION_RISKS,
   BUS_FACTOR, SIMULATION_SCENARIOS, COMMIT_HONESTY,
-  AI_ADVISOR_RESPONSES, CONTRIBUTION_STATS, CHECKPOINTS,
+  AI_ADVISOR_RESPONSES, CHECKPOINTS,
 };
 
 /**
@@ -195,8 +165,6 @@ export function updateStore(data) {
   if (data.COMMITS) COMMITS = data.COMMITS;
   if (data.BRANCHES) BRANCHES = data.BRANCHES;
   if (data.PULL_REQUESTS) PULL_REQUESTS = data.PULL_REQUESTS;
-  if (data.HEALTH_SCORE) HEALTH_SCORE = data.HEALTH_SCORE;
-  if (data.VELOCITY_DATA) VELOCITY_DATA = data.VELOCITY_DATA;
   if (data.ACTIVE_WORK) ACTIVE_WORK = data.ACTIVE_WORK;
   if (data.BLOCKERS) BLOCKERS = data.BLOCKERS;
   if (data.GHOSTING_ALERTS) GHOSTING_ALERTS = data.GHOSTING_ALERTS;
@@ -205,7 +173,6 @@ export function updateStore(data) {
   if (data.SIMULATION_SCENARIOS) SIMULATION_SCENARIOS = data.SIMULATION_SCENARIOS;
   if (data.COMMIT_HONESTY) COMMIT_HONESTY = data.COMMIT_HONESTY;
   if (data.AI_ADVISOR_RESPONSES) AI_ADVISOR_RESPONSES = data.AI_ADVISOR_RESPONSES;
-  if (data.CONTRIBUTION_STATS) CONTRIBUTION_STATS = data.CONTRIBUTION_STATS;
   if (data.CHECKPOINTS) CHECKPOINTS = data.CHECKPOINTS;
 }
 
@@ -215,8 +182,6 @@ export function restoreDefaults() {
   COMMITS = _DEFAULTS.COMMITS;
   BRANCHES = _DEFAULTS.BRANCHES;
   PULL_REQUESTS = _DEFAULTS.PULL_REQUESTS;
-  HEALTH_SCORE = _DEFAULTS.HEALTH_SCORE;
-  VELOCITY_DATA = _DEFAULTS.VELOCITY_DATA;
   ACTIVE_WORK = _DEFAULTS.ACTIVE_WORK;
   BLOCKERS = _DEFAULTS.BLOCKERS;
   GHOSTING_ALERTS = _DEFAULTS.GHOSTING_ALERTS;
@@ -225,6 +190,5 @@ export function restoreDefaults() {
   SIMULATION_SCENARIOS = _DEFAULTS.SIMULATION_SCENARIOS;
   COMMIT_HONESTY = _DEFAULTS.COMMIT_HONESTY;
   AI_ADVISOR_RESPONSES = _DEFAULTS.AI_ADVISOR_RESPONSES;
-  CONTRIBUTION_STATS = _DEFAULTS.CONTRIBUTION_STATS;
   CHECKPOINTS = _DEFAULTS.CHECKPOINTS;
 }

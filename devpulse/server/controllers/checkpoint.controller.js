@@ -6,6 +6,7 @@
 import * as store from '../data/store.js';
 import github from '../services/github.service.js';
 import gmail from '../services/gmail.service.js';
+import calendarService from '../services/calendar.service.js';
 import googleCalendar from '../services/google-calendar.service.js';
 
 let nextId = 100; // auto-increment ID
@@ -102,9 +103,9 @@ export const createCheckpoint = async (req, res) => {
     }
   }
 
-  // ── Google Calendar: create event & invite all collaborators ──
+  // Create Google Calendar event if configured
   let calendarEvent = null;
-  if (googleCalendar.enabled) {
+  if (googleCalendar.enabled && assigneeEmail) {
     try {
       // Fetch collaborator emails from GitHub API
       let collaboratorEmails = [];

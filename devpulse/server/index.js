@@ -14,6 +14,8 @@ import commitRoutes from './routes/commit.routes.js';
 import githubRoutes from './routes/github.routes.js';
 import notificationRoutes from './routes/notification.routes.js';
 import checkpointRoutes from './routes/checkpoint.routes.js';
+import agentRoutes from './routes/agent.routes.js';
+import calendarRoutes from './routes/calendar.routes.js';
 import discordBot from './services/discord-bot.service.js';
 
 const app = express();
@@ -36,6 +38,8 @@ app.use('/api/commits', commitRoutes);
 app.use('/api/github', githubRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/checkpoints', checkpointRoutes);
+app.use('/api/agent', agentRoutes);
+app.use('/api/calendar', calendarRoutes);
 
 // ── Health check ────────────────────────────────────────
 app.get('/api/ping', (_req, res) => {

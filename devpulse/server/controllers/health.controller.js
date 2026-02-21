@@ -1,22 +1,23 @@
-import { HEALTH_SCORE, VELOCITY_DATA, CONTRIBUTION_STATS } from '../data/store.js';
+import {
+  computeHealthScore,
+  computeVelocity,
+  computeContributions,
+  computeFullHealthRadar,
+} from '../services/metrics.service.js';
 
 export const getHealthScore = (_req, res) => {
-  res.json(HEALTH_SCORE);
+  res.json(computeHealthScore());
 };
 
 export const getVelocity = (_req, res) => {
-  res.json(VELOCITY_DATA);
+  res.json(computeVelocity());
 };
 
 export const getContributions = (_req, res) => {
-  res.json(CONTRIBUTION_STATS);
+  res.json(computeContributions());
 };
 
-/** Combined payload for Health Radar panel */
+/** Combined payload for Health Radar panel — all computed live */
 export const getHealthRadar = (_req, res) => {
-  res.json({
-    healthScore: HEALTH_SCORE,
-    velocity: VELOCITY_DATA,
-    contributions: CONTRIBUTION_STATS,
-  });
+  res.json(computeFullHealthRadar());
 };

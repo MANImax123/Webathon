@@ -1,14 +1,15 @@
 import { Bell, Github, Clock } from 'lucide-react';
+import { TEAM, HEALTH_SCORE } from '../../data/demoData';
 import useApi from '../../hooks/useApi';
 import api from '../../services/api';
 
 export default function Navbar() {
-  const { data: teamData } = useApi(api.getTeam, { repo: '', description: '', members: [], deadline: null });
-  const { data: healthData } = useApi(api.getHealthScore, { overall: 0 });
-  const healthOverall = healthData.overall ?? 0;
-  const hoursLeft = teamData.deadline
-    ? Math.max(0, Math.round((new Date(teamData.deadline) - new Date()) / (1000 * 60 * 60)))
-    : null;
+  const { data: teamData } = useApi(api.getTeam, TEAM);
+  const { data: healthData } = useApi(api.getHealthScore, HEALTH_SCORE);
+  const healthOverall = healthData.overall ?? HEALTH_SCORE.overall;
+  const hoursLeft = Math.max(0, Math.round(
+    (new Date(teamData.deadline || '2026-02-22T18:00:00Z') - new Date()) / (1000 * 60 * 60)
+  ));
 
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-2xl flex items-center justify-between px-6 sticky top-0 z-30">
@@ -25,14 +26,12 @@ export default function Navbar() {
       {/* Right — Status bar */}
       <div className="flex items-center gap-3">
         {/* Deadline countdown */}
-        {hoursLeft !== null && (
-          <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary border border-border">
-            <Clock size={14} className={hoursLeft <= 24 ? 'text-red-400' : 'text-amber-400'} />
-            <span className={`text-xs font-mono font-bold ${hoursLeft <= 24 ? 'text-red-400' : 'text-amber-400'}`}>
-              {hoursLeft}h left
-            </span>
-          </div>
-        )}
+        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary border border-border">
+          <Clock size={14} className={hoursLeft <= 24 ? 'text-red-400' : 'text-amber-400'} />
+          <span className={`text-xs font-mono font-bold ${hoursLeft <= 24 ? 'text-red-400' : 'text-amber-400'}`}>
+            {hoursLeft}h left
+          </span>
+        </div>
 
         {/* Health badge */}
         <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${
