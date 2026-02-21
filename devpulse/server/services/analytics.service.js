@@ -4,7 +4,7 @@
 // ────────────────────────────────────────────────────────
 
 import github from './github.service.js';
-import { updateStore } from '../data/store.js';
+import { updateStore, CHECKPOINTS } from '../data/store.js';
 
 /* ── Constants ───────────────────────────────────────── */
 const COLORS = [
@@ -540,6 +540,27 @@ export async function syncFromGitHub() {
     });
 
     github.syncedAt = now.toISOString();
+
+    // ── 19. Auto-complete checkpoints whose branch was merged ──
+    const checkpoints = CHECKPOINTS || [];
+    let cpUpdated = false;
+    const updatedCheckpoints = checkpoints.map(cp => {
+      if (cp.branch && cp.status !== 'completed' && mergedBranches.has(cp.branch)) {
+        console.log(`✅ Auto-completing checkpoint "${cp.title}" — branch "${cp.branch}" merged into main`);
+        cpUpdated = true;
+        return {
+          ...cp,
+          status: 'completed',
+          progress: 100,
+          completedAt: now.toISOString(),
+        };
+      }
+      return cp;
+    });
+    if (cpUpdated) {
+      updateStore({ CHECKPOINTS: updatedCheckpoints });
+    }
+
     const summary = { commits: commits.length, members: members.length, prs: transformedPRs.length, branches: transformedBranches.length, blockers: blockers.length };
     console.log('✅ GitHub sync complete:', summary);
     return summary;

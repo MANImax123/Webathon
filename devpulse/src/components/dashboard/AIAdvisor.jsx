@@ -1,6 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
 import { Bot, Send, Sparkles, RotateCcw } from 'lucide-react';
-import { AI_ADVISOR_RESPONSES } from '../../data/demoData';
 import api from '../../services/api';
 
 const SUGGESTIONS = [
@@ -10,14 +9,14 @@ const SUGGESTIONS = [
   "Summarize project status",
 ];
 
+const WELCOME_MESSAGE = {
+  role: 'assistant',
+  content: 'Welcome to DevPulse AI Advisor. Ask me anything about your project — risks, team status, blockers, or delivery readiness.',
+  confidence: null,
+};
+
 export default function AIAdvisor() {
-  const [messages, setMessages] = useState([
-    {
-      role: 'assistant',
-      content: AI_ADVISOR_RESPONSES['default'].response,
-      confidence: AI_ADVISOR_RESPONSES['default'].confidence,
-    },
-  ]);
+  const [messages, setMessages] = useState([WELCOME_MESSAGE]);
   const [input, setInput] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
@@ -46,17 +45,12 @@ export default function AIAdvisor() {
         },
       ]);
     } catch {
-      // Fallback to local matching
-      const key = Object.keys(AI_ADVISOR_RESPONSES).find((k) =>
-        query.toLowerCase().includes(k)
-      ) || 'default';
-      const response = AI_ADVISOR_RESPONSES[key];
       setMessages((prev) => [
         ...prev,
         {
           role: 'assistant',
-          content: response.response,
-          confidence: response.confidence,
+          content: 'Sorry, I could not reach the AI service right now. Please make sure the server is running and try again.',
+          confidence: null,
         },
       ]);
     } finally {
@@ -65,13 +59,7 @@ export default function AIAdvisor() {
   };
 
   const handleReset = () => {
-    setMessages([
-      {
-        role: 'assistant',
-        content: AI_ADVISOR_RESPONSES['default'].response,
-        confidence: AI_ADVISOR_RESPONSES['default'].confidence,
-      },
-    ]);
+    setMessages([WELCOME_MESSAGE]);
   };
 
   return (

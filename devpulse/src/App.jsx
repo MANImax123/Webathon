@@ -1,5 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { Loader2 } from 'lucide-react';
 import LandingPage from './pages/LandingPage';
 import DashboardPage from './pages/DashboardPage';
 import CommitHonestyPage from './pages/CommitHonestyPage';
@@ -8,37 +9,56 @@ import api from './services/api';
 import './index.css';
 
 /**
- * On app boot, if the server has no active GitHub connection but we have
- * saved credentials in localStorage, silently re-connect so the user
- * doesn't have to log in again.  Runs once per page load.
+ * On app boot, block rendering until we've checked localStorage for saved
+ * GitHub credentials and re-connected if found.  This ensures dashboard
+ * components mount AFTER the server already has synced data, preventing
+ * the "blank page" where useApi fetches once and gets empty results.
  */
-function useAutoReconnectGitHub() {
+function App() {
+  const [ready, setReady] = useState(false);
+
   useEffect(() => {
     (async () => {
       try {
+        // If server already has an active connection, no work needed
         const s = await api.getGithubStatus();
-        if (s?.connected) return; // already connected
-      } catch { /* server might not be up yet — continue */ }
+        if (s?.connected) { setReady(true); return; }
+      } catch { /* server not reachable — continue */ }
 
+      // Try to restore from localStorage
       const saved = localStorage.getItem('devpulse_github');
-      if (!saved) return;
-
-      try {
-        const { token, owner, repo } = JSON.parse(saved);
-        if (!owner || !repo) return;
-        await api.connectGithub(token || undefined, owner, repo);
-        console.log(`🔄 Auto-reconnected to ${owner}/${repo}`);
-      } catch (err) {
-        // credentials expired or repo deleted — remove stored data
-        localStorage.removeItem('devpulse_github');
-        console.warn('Auto-reconnect failed, cleared saved credentials:', err.message);
+      if (saved) {
+        try {
+          const { token, owner, repo } = JSON.parse(saved);
+          if (owner && repo) {
+            await api.connectGithub(token || undefined, owner, repo);
+            console.log(`🔄 Auto-reconnected to ${owner}/${repo}`);
+          }
+        } catch (err) {
+          // Only clear localStorage on auth errors — keep it for transient failures
+          const msg = err.message || '';
+          if (msg.includes('401') || msg.includes('403') ||
+              msg.includes('authenticate') || msg.includes('Invalid') ||
+              msg.includes('not found')) {
+            localStorage.removeItem('devpulse_github');
+            console.warn('Auto-reconnect failed, cleared saved credentials:', msg);
+          } else {
+            console.warn('Auto-reconnect failed (transient, keeping credentials):', msg);
+          }
+        }
       }
+
+      setReady(true);
     })();
   }, []);
-}
 
-function App() {
-  useAutoReconnectGitHub();
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   return (
     <Router>

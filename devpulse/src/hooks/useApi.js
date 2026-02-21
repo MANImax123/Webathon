@@ -2,10 +2,10 @@ import { useState, useEffect } from 'react';
 
 /**
  * Generic data-fetching hook with loading/error states.
- * Falls back to `fallback` if the API call fails (keeps UI working with demo data).
+ * Falls back to `fallback` if the API call fails (shows empty state).
  *
  * @param {Function} apiFn  – async function that returns data
- * @param {*} fallback      – fallback data when API fails
+ * @param {*} fallback      – fallback data when API fails (empty arrays/objects)
  * @param {Array} deps      – dependency array for re-fetch
  */
 export default function useApi(apiFn, fallback = null, deps = []) {
@@ -23,10 +23,10 @@ export default function useApi(apiFn, fallback = null, deps = []) {
         if (!cancelled) setData(result);
       })
       .catch((err) => {
-        console.warn('[useApi] Falling back to demo data:', err.message);
+        console.warn('[useApi] API call failed:', err.message);
         if (!cancelled) {
           setError(err.message);
-          // Keep fallback data so UI never breaks
+          // Keep fallback data so UI shows empty state
         }
       })
       .finally(() => {

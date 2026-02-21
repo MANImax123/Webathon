@@ -1,5 +1,4 @@
 import { GitBranch, Clock, AlertCircle } from 'lucide-react';
-import { ACTIVE_WORK, TEAM, COMMITS } from '../../data/demoData';
 import useApi from '../../hooks/useApi';
 import api from '../../services/api';
 
@@ -10,9 +9,9 @@ const statusConfig = {
 };
 
 export default function ActiveWorkMap() {
-  const { data: apiData } = useApi(api.getWorkMap, { activeWork: ACTIVE_WORK, recentCommits: COMMITS.slice(-10) });
-  const activeWork = apiData.activeWork || ACTIVE_WORK;
-  const { data: teamData } = useApi(api.getTeam, TEAM);
+  const { data: apiData } = useApi(api.getWorkMap, { activeWork: [], recentCommits: [] });
+  const activeWork = apiData.activeWork || [];
+  const { data: teamData } = useApi(api.getTeam, { members: [] });
 
   return (
     <div className="space-y-5">
@@ -32,7 +31,7 @@ export default function ActiveWorkMap() {
         {activeWork.map((work) => {
           const member = teamData.members.find((m) => m.id === work.memberId);
           const cfg = statusConfig[work.status];
-          const recentCommits = (apiData.recentCommits || COMMITS).filter((c) => c.author === work.memberId).slice(-3);
+          const recentCommits = (apiData.recentCommits || []).filter((c) => c.author === work.memberId).slice(-3);
 
           return (
             <div

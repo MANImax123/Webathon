@@ -1,4 +1,5 @@
 import * as store from '../data/store.js';
+import github from '../services/github.service.js';
 
 /* ── OpenRouter setup ─────────────────────────────────── */
 const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
@@ -62,7 +63,7 @@ function buildProjectContext() {
 === DEVPULSE PROJECT DATA (live) ===
 
 PROJECT: ${store.TEAM?.name || '?'} — ${store.TEAM?.description || ''}
-REPO: ${store.TEAM?.repo || '?'}
+REPO: ${github.isConfigured ? `${github.owner}/${github.repo}` : (store.TEAM?.repo || '?')}
 DEADLINE: ${store.TEAM?.deadline || '?'}
 
 HEALTH SCORE: ${h.overall ?? '?'}/100

@@ -1,5 +1,4 @@
 import { AlertTriangle, AlertCircle, Info, GitPullRequest, UserX, GitBranch, Link2 } from 'lucide-react';
-import { BLOCKERS, TEAM, GHOSTING_ALERTS } from '../../data/demoData';
 import useApi from '../../hooks/useApi';
 import api from '../../services/api';
 
@@ -31,10 +30,10 @@ const typeIcons = {
 };
 
 export default function BlockerAlerts() {
-  const { data: apiData } = useApi(api.getBlockerDashboard, { blockers: BLOCKERS, ghostingAlerts: GHOSTING_ALERTS });
-  const blockers = apiData.blockers || BLOCKERS;
-  const ghostingAlerts = apiData.ghostingAlerts || GHOSTING_ALERTS;
-  const { data: teamData } = useApi(api.getTeam, TEAM);
+  const { data: apiData } = useApi(api.getBlockerDashboard, { blockers: [], ghostingAlerts: [] });
+  const blockers = apiData.blockers || [];
+  const ghostingAlerts = apiData.ghostingAlerts || [];
+  const { data: teamData } = useApi(api.getTeam, { members: [] });
   const criticalCount = blockers.filter((b) => b.severity === 'critical').length;
   const highCount = blockers.filter((b) => b.severity === 'high').length;
 

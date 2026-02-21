@@ -63,7 +63,7 @@ export const createCheckpoint = async (req, res) => {
     return res.status(403).json({ error: 'Only the repository lead/admin can create checkpoints' });
   }
 
-  const { title, description, assignee, priority, deadline } = req.body;
+  const { title, description, assignee, priority, deadline, branch } = req.body;
   if (!title || !assignee || !deadline) {
     return res.status(400).json({ error: 'title, assignee, and deadline are required' });
   }
@@ -84,6 +84,7 @@ export const createCheckpoint = async (req, res) => {
     completedAt: null,
     createdBy: github.user?.login || 'lead',
     progress: 0,
+    ...(branch && { branch }),
   };
 
   store.updateStore({ CHECKPOINTS: [...(store.CHECKPOINTS || []), checkpoint] });
@@ -161,7 +162,7 @@ export const updateCheckpoint = (req, res) => {
   if (idx === -1) return res.status(404).json({ error: 'Checkpoint not found' });
 
   const cp = checkpoints[idx];
-  const { title, description, assignee, priority, deadline, status, progress } = req.body;
+  const { title, description, assignee, priority, deadline, status, progress, branch } = req.body;
 
   // If lead: can update anything
   // If collaborator: can only update status and progress on their own tasks
@@ -197,6 +198,7 @@ export const updateCheckpoint = (req, res) => {
     ...(deadline && { deadline: new Date(deadline).toISOString() }),
     ...(status && { status }),
     ...(progress != null && { progress: Math.min(100, Math.max(0, Number(progress))) }),
+    ...(branch != null && { branch: branch || undefined }),
   };
 
   if (updated.status === 'completed') {

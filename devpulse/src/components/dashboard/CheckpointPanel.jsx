@@ -3,7 +3,7 @@ import {
   CheckCircle2, Clock, AlertTriangle, Plus, Trash2, Edit3,
   Target, User, Calendar, ChevronDown, ChevronUp, BarChart3,
   Flag, Loader2, Save, X, Mail, Copy, Check, Bell, CalendarDays,
-  List, ChevronLeft, ChevronRight, BellRing,
+  List, ChevronLeft, ChevronRight, BellRing, GitBranch,
 } from 'lucide-react';
 import useApi from '../../hooks/useApi';
 import api from '../../services/api';
@@ -50,7 +50,7 @@ function StatCard({ icon: Icon, label, value, color }) {
 /* ── Create Checkpoint Form ─────────────────────────────── */
 
 function CreateCheckpointForm({ members, onCreated, onCancel }) {
-  const [form, setForm] = useState({ title: '', description: '', assignee: '', priority: 'medium', deadline: '' });
+  const [form, setForm] = useState({ title: '', description: '', assignee: '', priority: 'medium', deadline: '', branch: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -145,6 +145,15 @@ function CreateCheckpointForm({ members, onCreated, onCancel }) {
             className="w-full px-3 py-2 rounded-xl bg-secondary border border-border text-foreground focus:outline-none focus:border-blue-500/50"
           />
         </div>
+        <div>
+          <label className="block text-sm font-medium text-muted-foreground mb-1">Branch (optional)</label>
+          <input
+            value={form.branch}
+            onChange={(e) => setForm({ ...form, branch: e.target.value })}
+            className="w-full px-3 py-2 rounded-xl bg-secondary border border-border text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-blue-500/50 font-mono text-sm"
+            placeholder="e.g. feature/auth"
+          />
+        </div>
       </div>
 
       <div className="flex items-center gap-3 text-xs text-muted-foreground bg-blue-500/5 border border-blue-500/10 rounded-xl px-4 py-2.5">
@@ -155,6 +164,11 @@ function CreateCheckpointForm({ members, onCreated, onCancel }) {
       <div className="flex items-center gap-3 text-xs text-muted-foreground bg-green-500/5 border border-green-500/10 rounded-xl px-4 py-2.5">
         <Calendar size={14} className="text-green-400 flex-shrink-0" />
         <span>If Google Calendar is configured, a <strong className="text-foreground">Google Calendar event</strong> will be created and all collaborator emails (fetched via GitHub API) will be invited automatically.</span>
+      </div>
+
+      <div className="flex items-center gap-3 text-xs text-muted-foreground bg-violet-500/5 border border-violet-500/10 rounded-xl px-4 py-2.5">
+        <GitBranch size={14} className="text-violet-400 flex-shrink-0" />
+        <span>If a <strong className="text-foreground">branch</strong> is specified, the checkpoint will be <strong className="text-foreground">auto-completed</strong> when that branch is merged into main.</span>
       </div>
 
       <div className="flex justify-end gap-2">
@@ -179,7 +193,6 @@ function CreateCheckpointForm({ members, onCreated, onCancel }) {
 function CheckpointCard({ cp, isLead, onUpdate, onDelete }) {
   const [expanded, setExpanded] = useState(false);
   const [editing, setEditing] = useState(false);
-  const [progress, setProgress] = useState(cp.progress);
   const [status, setStatus] = useState(cp.status);
   const [saving, setSaving] = useState(false);
   const statusCfg = STATUS_CONFIG[cp.status] || STATUS_CONFIG['not-started'];
@@ -192,7 +205,8 @@ function CheckpointCard({ cp, isLead, onUpdate, onDelete }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.updateCheckpoint(cp.id, { progress, status });
+      const newProgress = status === 'completed' ? 100 : status === 'in-progress' ? 50 : 0;
+      await api.updateCheckpoint(cp.id, { progress: newProgress, status });
       onUpdate();
       setEditing(false);
     } catch (err) {
@@ -235,6 +249,11 @@ function CheckpointCard({ cp, isLead, onUpdate, onDelete }) {
               <span className="text-xs text-muted-foreground flex items-center gap-1">
                 <Calendar size={12} /> {deadlineStr}
               </span>
+              {cp.branch && (
+                <span className="text-xs text-violet-400 flex items-center gap-1 font-mono">
+                  <GitBranch size={12} /> {cp.branch}
+                </span>
+              )}
               {daysLeft !== undefined && cp.status !== 'completed' && (
                 <span className={`text-xs font-medium ${daysLeft < 0 ? 'text-red-400' : daysLeft <= 2 ? 'text-amber-400' : 'text-green-400'}`}>
                   {daysLeft < 0 ? `${Math.abs(daysLeft)}d overdue` : daysLeft === 0 ? 'Due today' : `${daysLeft}d left`}
@@ -255,10 +274,25 @@ function CheckpointCard({ cp, isLead, onUpdate, onDelete }) {
         </div>
       </div>
 
-      {/* Progress bar */}
-      <div className="mt-3 flex items-center gap-3">
-        <ProgressBar value={cp.progress} className="flex-1" />
-        <span className="text-xs font-bold text-muted-foreground w-10 text-right">{cp.progress}%</span>
+      {/* Status indicator */}
+      <div className="mt-3">
+        {cp.status === 'completed' ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-green-400 bg-green-500/10 px-3 py-1 rounded-full border border-green-500/20">
+            <CheckCircle2 size={12} /> Done
+          </span>
+        ) : cp.status === 'in-progress' ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-400 bg-blue-500/10 px-3 py-1 rounded-full border border-blue-500/20">
+            <Loader2 size={12} /> In Progress
+          </span>
+        ) : cp.isOverdue || cp.status === 'overdue' ? (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-red-400 bg-red-500/10 px-3 py-1 rounded-full border border-red-500/20">
+            <AlertTriangle size={12} /> Overdue
+          </span>
+        ) : (
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-gray-400 bg-gray-500/10 px-3 py-1 rounded-full border border-gray-500/20">
+            <Clock size={12} /> Not Started
+          </span>
+        )}
       </div>
 
       {/* Expanded detail */}
@@ -268,7 +302,7 @@ function CheckpointCard({ cp, isLead, onUpdate, onDelete }) {
             <p className="text-sm text-muted-foreground">{cp.description}</p>
           )}
 
-          {/* Inline edit for progress / status */}
+          {/* Inline edit for status */}
           {editing ? (
             <div className="flex flex-wrap items-end gap-3">
               <div>
@@ -283,16 +317,6 @@ function CheckpointCard({ cp, isLead, onUpdate, onDelete }) {
                   <option value="completed">Completed</option>
                 </select>
               </div>
-              <div>
-                <label className="block text-xs text-muted-foreground mb-1">Progress ({progress}%)</label>
-                <input
-                  type="range"
-                  min="0" max="100" step="5"
-                  value={progress}
-                  onChange={(e) => setProgress(Number(e.target.value))}
-                  className="w-32 accent-blue-500"
-                />
-              </div>
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -300,7 +324,7 @@ function CheckpointCard({ cp, isLead, onUpdate, onDelete }) {
               >
                 {saving ? <Loader2 size={12} className="animate-spin" /> : <Save size={12} />} Save
               </button>
-              <button onClick={() => { setEditing(false); setProgress(cp.progress); setStatus(cp.status); }} className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground bg-secondary border border-border">
+              <button onClick={() => { setEditing(false); setStatus(cp.status); }} className="px-3 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-foreground bg-secondary border border-border">
                 Cancel
               </button>
             </div>
@@ -309,7 +333,7 @@ function CheckpointCard({ cp, isLead, onUpdate, onDelete }) {
               onClick={() => setEditing(true)}
               className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 transition-colors"
             >
-              <Edit3 size={12} /> Update Progress
+              <Edit3 size={12} /> Update Status
             </button>
           )}
 
@@ -351,17 +375,21 @@ function MemberProgressSection({ progress }) {
               {(mp.name || mp.memberName)?.[0] || '?'}
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-foreground truncate">{mp.name || mp.memberName}</span>
                 <span className="text-xs text-muted-foreground">
-                  {mp.completed}/{mp.totalTasks || mp.total} done · {mp.completionRate}%
+                  {mp.completed}/{mp.totalTasks || mp.total} done
                 </span>
               </div>
-              <ProgressBar value={mp.completionRate} />
             </div>
             {mp.overdue > 0 && (
               <span className="text-xs font-medium text-red-400 bg-red-500/10 px-2 py-0.5 rounded-full flex-shrink-0">
                 {mp.overdue} overdue
+              </span>
+            )}
+            {mp.completed === (mp.totalTasks || mp.total) && (mp.totalTasks || mp.total) > 0 && (
+              <span className="text-xs font-medium text-green-400 bg-green-500/10 px-2 py-0.5 rounded-full flex-shrink-0">
+                All done ✓
               </span>
             )}
           </div>
@@ -607,9 +635,24 @@ function useCheckpointReminders(checkpoints) {
 
 export default function CheckpointPanel() {
   const { data: teamData } = useApi(api.getTeam, { members: [] });
-  const [checkpoints, setCheckpoints] = useState([]);
-  const [summary, setSummary] = useState({ total: 0, completed: 0, inProgress: 0, overdue: 0, notStarted: 0 });
-  const [memberProgress, setMemberProgress] = useState([]);
+  const [checkpoints, setCheckpoints] = useState(() => {
+    try {
+      const saved = localStorage.getItem('devpulse_checkpoints');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
+  const [summary, setSummary] = useState(() => {
+    try {
+      const saved = localStorage.getItem('devpulse_checkpoints_summary');
+      return saved ? JSON.parse(saved) : { total: 0, completed: 0, inProgress: 0, overdue: 0, notStarted: 0 };
+    } catch { return { total: 0, completed: 0, inProgress: 0, overdue: 0, notStarted: 0 }; }
+  });
+  const [memberProgress, setMemberProgress] = useState(() => {
+    try {
+      const saved = localStorage.getItem('devpulse_checkpoints_progress');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [filter, setFilter] = useState('all');
@@ -642,11 +685,28 @@ export default function CheckpointPanel() {
         api.getCheckpoints(),
         api.getProgressSummary(),
       ]);
-      setCheckpoints(cpRes.checkpoints || []);
+      const cps = cpRes.checkpoints || [];
+      setCheckpoints(cps);
       setSummary(cpRes.summary || {});
       setMemberProgress(progressRes.members || progressRes.progress || []);
+
+      // Persist to localStorage so checkpoints survive page refreshes / server restarts
+      try {
+        localStorage.setItem('devpulse_checkpoints', JSON.stringify(cps));
+        localStorage.setItem('devpulse_checkpoints_summary', JSON.stringify(cpRes.summary || {}));
+        localStorage.setItem('devpulse_checkpoints_progress', JSON.stringify(progressRes.members || progressRes.progress || []));
+      } catch { /* storage quota — ignore */ }
     } catch (err) {
       console.warn('Checkpoint load error:', err.message);
+      // Fall back to localStorage
+      try {
+        const savedCps = localStorage.getItem('devpulse_checkpoints');
+        if (savedCps) setCheckpoints(JSON.parse(savedCps));
+        const savedSummary = localStorage.getItem('devpulse_checkpoints_summary');
+        if (savedSummary) setSummary(JSON.parse(savedSummary));
+        const savedProgress = localStorage.getItem('devpulse_checkpoints_progress');
+        if (savedProgress) setMemberProgress(JSON.parse(savedProgress));
+      } catch { /* corrupt data — ignore */ }
     } finally {
       setLoading(false);
     }

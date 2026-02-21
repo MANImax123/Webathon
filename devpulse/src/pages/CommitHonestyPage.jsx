@@ -1,13 +1,9 @@
 import { useState } from 'react';
 import { GitCommit, AlertTriangle, CheckCircle, Search, ChevronDown, ChevronRight, ArrowLeft, Shield } from 'lucide-react';
-import { COMMITS, COMMIT_HONESTY, TEAM } from '../data/demoData';
 import useApi from '../hooks/useApi';
 import api from '../services/api';
 import Sidebar from '../components/shared/Sidebar';
 import Navbar from '../components/shared/Navbar';
-
-const getMember = (id) => TEAM.members.find((m) => m.id === id);
-const getHonesty = (commitId) => COMMIT_HONESTY.find((h) => h.commitId === commitId);
 
 function MatchBar({ score }) {
   const color = score >= 80 ? '#10b981' : score >= 40 ? '#f59e0b' : '#ef4444';
@@ -39,10 +35,10 @@ function VerdictBadge({ verdict }) {
 }
 
 export default function CommitHonestyPage() {
-  const { data: pageData } = useApi(api.getCommitHonestyPage, { commits: COMMITS, honesty: COMMIT_HONESTY });
-  const { data: teamData } = useApi(api.getTeam, TEAM);
-  const commits = pageData.commits || COMMITS;
-  const honestyData = pageData.honesty || COMMIT_HONESTY;
+  const { data: pageData } = useApi(api.getCommitHonestyPage, { commits: [], honesty: [] });
+  const { data: teamData } = useApi(api.getTeam, { members: [] });
+  const commits = pageData.commits || [];
+  const honestyData = pageData.honesty || [];
 
   const getMemberLocal = (id) => teamData.members.find((m) => m.id === id);
   const getHonestyLocal = (commitId) => honestyData.find((h) => h.commitId === commitId);

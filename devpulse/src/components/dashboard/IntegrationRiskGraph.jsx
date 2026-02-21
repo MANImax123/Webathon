@@ -2,7 +2,6 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell
 } from 'recharts';
 import { AlertTriangle, CheckCircle, Link2Off, Link2 } from 'lucide-react';
-import { INTEGRATION_RISKS } from '../../data/demoData';
 import useApi from '../../hooks/useApi';
 import api from '../../services/api';
 
@@ -33,7 +32,7 @@ const CustomTooltip = ({ active, payload }) => {
 };
 
 export default function IntegrationRiskGraph() {
-  const { data: risks } = useApi(api.getIntegrationRisks, INTEGRATION_RISKS);
+  const { data: risks } = useApi(api.getIntegrationRisks, []);
   const sortedRisks = [...risks].sort((a, b) => b.risk - a.risk);
   const highRisk = risks.filter((r) => r.risk >= 50);
 

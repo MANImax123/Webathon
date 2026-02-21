@@ -50,49 +50,26 @@ export default function SettingsPage() {
 
   /* ── Auto-reconnect from localStorage on mount ───── */
   useEffect(() => {
-    const autoReconnect = async () => {
-      // First check if server already has a connection
-      try {
-        const s = await api.getGithubStatus();
-        if (s?.connected) {
-          setStatus(s);
-          setLoading(false);
-          fetchNotifStatus();
-          return;
-        }
-      } catch { /* server not connected, try localStorage */ }
+    const init = async () => {
+      // App.jsx already handles auto-reconnect before this mounts,
+      // so we just need to fetch the current status.
+      await fetchStatus();
+      fetchNotifStatus();
 
-      // Try to restore from localStorage
+      // Pre-fill form fields from localStorage when not yet connected
       const saved = localStorage.getItem('devpulse_github');
       if (saved) {
         try {
-          const { token: savedToken, owner, repo, repoUrl: savedUrl } = JSON.parse(saved);
-          if (owner && repo) {
-            setAction('connecting');
+          const { token: savedToken, repoUrl: savedUrl, owner, repo } = JSON.parse(saved);
+          if (savedUrl || (owner && repo)) {
             setRepoUrl(savedUrl || `${owner}/${repo}`);
-            if (savedToken) setToken(savedToken);
-            try {
-              const res = await api.connectGithub(savedToken || undefined, owner, repo);
-              setResult(res);
-              const s = await api.getGithubStatus();
-              setStatus(s);
-            } catch (err) {
-              // Stored credentials are stale — clear them
-              localStorage.removeItem('devpulse_github');
-              console.warn('Auto-reconnect failed, cleared saved credentials:', err.message);
-            } finally {
-              setAction(null);
-            }
           }
-        } catch {
-          localStorage.removeItem('devpulse_github');
-        }
+          if (savedToken) setToken(savedToken);
+        } catch { /* ignore corrupt data */ }
       }
-      setLoading(false);
-      fetchNotifStatus();
     };
-    autoReconnect();
-  }, [fetchNotifStatus]);
+    init();
+  }, [fetchStatus, fetchNotifStatus]);
 
   const connected = status?.connected;
   const discordConnected = notifStatus?.discord?.configured;

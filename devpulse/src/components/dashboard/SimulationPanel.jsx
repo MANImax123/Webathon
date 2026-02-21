@@ -1,26 +1,30 @@
 import { useState } from 'react';
-import { SlidersHorizontal, Play, ArrowDown, ArrowUp, AlertTriangle, TrendingDown, TrendingUp, RotateCcw } from 'lucide-react';
-import { SIMULATION_SCENARIOS, HEALTH_SCORE } from '../../data/demoData';
+import { SlidersHorizontal, Play, ArrowDown, ArrowUp, AlertTriangle, TrendingDown, TrendingUp, RotateCcw, Lightbulb, Activity, Users, GitPullRequest, ShieldAlert } from 'lucide-react';
 import useApi from '../../hooks/useApi';
 import api from '../../services/api';
 
 export default function SimulationPanel() {
-  const { data: simData } = useApi(api.getSimulationDashboard, { scenarios: SIMULATION_SCENARIOS, currentHealth: HEALTH_SCORE.overall });
-  const scenarios = simData.scenarios || SIMULATION_SCENARIOS;
-  const currentHealth = simData.currentHealth ?? HEALTH_SCORE.overall;
+  const { data: simData } = useApi(api.getSimulationDashboard, { scenarios: [], currentHealth: 0 });
+  const scenarios = simData.scenarios || [];
+  const currentHealth = simData.currentHealth ?? 0;
   const [activeScenario, setActiveScenario] = useState(null);
   const [isSimulating, setIsSimulating] = useState(false);
   const [result, setResult] = useState(null);
 
-  const runSimulation = (scenario) => {
+  const runSimulation = async (scenario) => {
     setActiveScenario(scenario.id);
     setIsSimulating(true);
     setResult(null);
 
-    setTimeout(() => {
+    try {
+      const simResult = await api.runSimulation(scenario.id);
+      setResult(simResult);
+    } catch {
+      // Fallback: use the scenario's local impact data if API fails
       setResult(scenario.impact);
+    } finally {
       setIsSimulating(false);
-    }, 1500);
+    }
   };
 
   const reset = () => {
@@ -123,6 +127,9 @@ export default function SimulationPanel() {
           <h3 className="text-sm font-bold text-foreground mb-5 flex items-center gap-2">
             {isPositive ? <TrendingUp size={16} className="text-green-400" /> : <TrendingDown size={16} className="text-red-400" />}
             Simulation Result
+            {result.scenarioName && (
+              <span className="text-muted-foreground font-normal ml-1">— {result.scenarioName}</span>
+            )}
           </h3>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
@@ -151,8 +158,8 @@ export default function SimulationPanel() {
             {/* Delivery Risk */}
             <div className="rounded-xl bg-secondary border border-border p-4 text-center">
               <p className="text-sm text-muted-foreground mb-2">Delivery Risk</p>
-              <p className={`text-2xl font-bold ${result.riskChange.deliveryRisk > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                {result.riskChange.deliveryRisk > 0 ? '+' : ''}{result.riskChange.deliveryRisk}%
+              <p className={`text-2xl font-bold ${result.riskChange?.deliveryRisk > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                {result.riskChange?.deliveryRisk > 0 ? '+' : ''}{result.riskChange?.deliveryRisk ?? 0}%
               </p>
               <span className="text-sm text-muted-foreground">change</span>
             </div>
@@ -160,31 +167,90 @@ export default function SimulationPanel() {
             {/* Integration Risk */}
             <div className="rounded-xl bg-secondary border border-border p-4 text-center">
               <p className="text-sm text-muted-foreground mb-2">Integration Risk</p>
-              <p className={`text-2xl font-bold ${result.riskChange.integrationRisk > 0 ? 'text-red-400' : 'text-green-400'}`}>
-                {result.riskChange.integrationRisk > 0 ? '+' : ''}{result.riskChange.integrationRisk}%
+              <p className={`text-2xl font-bold ${result.riskChange?.integrationRisk > 0 ? 'text-red-400' : 'text-green-400'}`}>
+                {result.riskChange?.integrationRisk > 0 ? '+' : ''}{result.riskChange?.integrationRisk ?? 0}%
               </p>
               <span className="text-sm text-muted-foreground">change</span>
             </div>
           </div>
 
-          {/* Affected modules */}
-          <div className="rounded-xl bg-secondary/50 border border-border p-4">
-            <p className="text-sm text-muted-foreground mb-3 font-medium">Affected Modules</p>
-            <div className="flex flex-wrap gap-2">
-              {result.affectedModules.map((m) => (
-                <span
-                  key={m}
-                  className={`text-xs px-3 py-1.5 rounded-lg font-medium ${
-                    isPositive
-                      ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-                      : 'bg-red-500/10 text-red-400 border border-red-500/20'
-                  }`}
-                >
-                  {m}
-                </span>
-              ))}
+          {/* Analysis */}
+          {result.analysis && result.analysis.length > 0 && (
+            <div className="rounded-xl bg-secondary/50 border border-border p-4 mb-4">
+              <p className="text-sm text-muted-foreground mb-3 font-medium flex items-center gap-2">
+                <Activity size={14} className={isPositive ? 'text-green-400' : 'text-red-400'} />
+                Impact Analysis
+              </p>
+              <ul className="space-y-2">
+                {result.analysis.map((line, i) => (
+                  <li key={i} className="text-sm text-foreground/80 flex items-start gap-2">
+                    <span className={`mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 ${isPositive ? 'bg-green-400' : 'bg-red-400'}`} />
+                    {line}
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
+          )}
+
+          {/* Recommendations */}
+          {result.recommendations && result.recommendations.length > 0 && (
+            <div className="rounded-xl bg-blue-500/5 border border-blue-500/15 p-4 mb-4">
+              <p className="text-sm text-muted-foreground mb-3 font-medium flex items-center gap-2">
+                <Lightbulb size={14} className="text-blue-400" />
+                Recommendations
+              </p>
+              <ul className="space-y-2">
+                {result.recommendations.map((rec, i) => (
+                  <li key={i} className="text-sm text-foreground/80 flex items-start gap-2">
+                    <span className="mt-1 w-1.5 h-1.5 rounded-full flex-shrink-0 bg-blue-400" />
+                    {rec}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* Project Snapshot */}
+          {(result.activeMembers != null || result.currentBlockers != null || result.openPRs != null) && (
+            <div className="grid grid-cols-3 gap-3 mb-4">
+              <div className="rounded-xl bg-secondary/50 border border-border p-3 text-center">
+                <Users size={14} className="mx-auto text-blue-400 mb-1" />
+                <p className="text-lg font-bold text-foreground">{result.activeMembers}/{result.totalMembers}</p>
+                <p className="text-xs text-muted-foreground">Active Members</p>
+              </div>
+              <div className="rounded-xl bg-secondary/50 border border-border p-3 text-center">
+                <ShieldAlert size={14} className="mx-auto text-amber-400 mb-1" />
+                <p className="text-lg font-bold text-foreground">{result.currentBlockers}</p>
+                <p className="text-xs text-muted-foreground">Current Blockers</p>
+              </div>
+              <div className="rounded-xl bg-secondary/50 border border-border p-3 text-center">
+                <GitPullRequest size={14} className="mx-auto text-violet-400 mb-1" />
+                <p className="text-lg font-bold text-foreground">{result.openPRs}</p>
+                <p className="text-xs text-muted-foreground">Open PRs</p>
+              </div>
+            </div>
+          )}
+
+          {/* Affected modules */}
+          {result.affectedModules && result.affectedModules.length > 0 && (
+            <div className="rounded-xl bg-secondary/50 border border-border p-4">
+              <p className="text-sm text-muted-foreground mb-3 font-medium">Affected Modules</p>
+              <div className="flex flex-wrap gap-2">
+                {result.affectedModules.map((m) => (
+                  <span
+                    key={m}
+                    className={`text-xs px-3 py-1.5 rounded-lg font-medium ${
+                      isPositive
+                        ? 'bg-green-500/10 text-green-400 border border-green-500/20'
+                        : 'bg-red-500/10 text-red-400 border border-red-500/20'
+                    }`}
+                  >
+                    {m}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

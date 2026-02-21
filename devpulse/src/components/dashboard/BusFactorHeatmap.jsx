@@ -1,5 +1,4 @@
 import { AlertTriangle, Shield } from 'lucide-react';
-import { BUS_FACTOR, TEAM } from '../../data/demoData';
 import useApi from '../../hooks/useApi';
 import api from '../../services/api';
 
@@ -17,8 +16,8 @@ function getOpacity(value) {
 }
 
 export default function BusFactorHeatmap() {
-  const { data: busFactor } = useApi(api.getBusFactor, BUS_FACTOR);
-  const { data: teamData } = useApi(api.getTeam, TEAM);
+  const { data: busFactor } = useApi(api.getBusFactor, { modules: [], contributors: [], data: [] });
+  const { data: teamData } = useApi(api.getTeam, { members: [] });
   const warnings = [];
   busFactor.data.forEach((row, moduleIdx) => {
     const max = Math.max(...row);

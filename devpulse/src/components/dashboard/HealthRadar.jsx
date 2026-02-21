@@ -3,9 +3,10 @@ import {
   RadialBarChart, RadialBar
 } from 'recharts';
 import { TrendingDown, TrendingUp, AlertTriangle, Shield, Zap } from 'lucide-react';
-import { HEALTH_SCORE, VELOCITY_DATA, CONTRIBUTION_STATS, TEAM } from '../../data/demoData';
 import useApi from '../../hooks/useApi';
 import api from '../../services/api';
+
+const EMPTY_HEALTH = { overall: 0, trend: [], breakdown: { deliveryRisk: 0, integrationRisk: 0, stabilityRisk: 0 } };
 
 const CustomTooltip = ({ active, payload, label }) => {
   if (!active || !payload?.length) return null;
@@ -45,14 +46,20 @@ function ScoreGauge({ score, label, color }) {
 }
 
 export default function HealthRadar() {
-  const { data: apiData } = useApi(api.getHealthRadar, { healthScore: HEALTH_SCORE, velocity: VELOCITY_DATA, contributions: CONTRIBUTION_STATS });
-  const healthScore = apiData.healthScore || HEALTH_SCORE;
-  const velocityData = apiData.velocity || VELOCITY_DATA;
-  const { data: teamData } = useApi(api.getTeam, TEAM);
-  const contributions = apiData.contributions || CONTRIBUTION_STATS;
+  const { data: apiData } = useApi(api.getHealthRadar, { healthScore: EMPTY_HEALTH, velocity: [], contributions: [] });
+  const healthScore = apiData.healthScore || EMPTY_HEALTH;
+  const velocityData = apiData.velocity || [];
+  const { data: teamData } = useApi(api.getTeam, { members: [] });
+  const contributions = apiData.contributions || [];
+  const { data: blockerData } = useApi(api.getBlockerDashboard, { blockers: [], ghostingAlerts: [] });
   const { overall, trend, breakdown } = healthScore;
   const lastTwo = trend.slice(-2);
-  const trendDirection = lastTwo[1]?.score >= lastTwo[0]?.score ? 'up' : 'down';
+  const trendDirection = lastTwo.length >= 2 && lastTwo[1]?.score >= lastTwo[0]?.score ? 'up' : 'down';
+
+  // Compute dynamic stats from API data
+  const blockerCount = (blockerData.blockers || []).length;
+  const stalePrCount = (blockerData.blockers || []).filter(b => b.type === 'stale_pr' || b.type === 'unreviewed_pr').length;
+  const behindLabel = breakdown.deliveryRisk > 0 ? `${Math.round(breakdown.deliveryRisk / 10)}d behind` : '0d behind';
 
   return (
     <div className="space-y-6">
@@ -98,9 +105,9 @@ export default function HealthRadar() {
           <div className="h-16 w-px bg-border" />
           <div className="flex flex-col items-center gap-2.5">
             {[
-              { icon: AlertTriangle, label: '5 Blockers', color: 'text-red-400' },
-              { icon: Shield, label: '3 Stale PRs', color: 'text-amber-400' },
-              { icon: Zap, label: '2d behind', color: 'text-violet-400' },
+              { icon: AlertTriangle, label: `${blockerCount} Blocker${blockerCount !== 1 ? 's' : ''}`, color: 'text-red-400' },
+              { icon: Shield, label: `${stalePrCount} Stale PR${stalePrCount !== 1 ? 's' : ''}`, color: 'text-amber-400' },
+              { icon: Zap, label: behindLabel, color: 'text-violet-400' },
             ].map(({ icon: Icon, label, color }, i) => (
               <div key={i} className={`flex items-center gap-2 text-sm font-medium ${color}`}>
                 <Icon size={13} />
