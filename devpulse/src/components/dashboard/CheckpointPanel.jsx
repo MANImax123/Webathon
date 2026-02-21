@@ -3,10 +3,28 @@ import {
   CheckCircle2, Clock, AlertTriangle, Plus, Trash2, Edit3,
   Target, User, Calendar, ChevronDown, ChevronUp, BarChart3,
   Flag, Loader2, Save, X, Mail, Copy, Check, Bell, CalendarDays,
-  List, ChevronLeft, ChevronRight, BellRing,
+  List, ChevronLeft, ChevronRight, BellRing, ExternalLink,
 } from 'lucide-react';
 import useApi from '../../hooks/useApi';
 import api from '../../services/api';
+
+/* ── Google Calendar URL Generator ──────────────────────── */
+function generateGoogleCalUrl(cp) {
+  const deadline = new Date(cp.deadline);
+  const endTime = new Date(deadline.getTime() + 3600000); // 1 hour event
+
+  const formatGCalDate = (d) => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
+
+  const params = new URLSearchParams({
+    action: 'TEMPLATE',
+    text: `📋 ${cp.title}`,
+    dates: `${formatGCalDate(deadline)}/${formatGCalDate(endTime)}`,
+    details: `${cp.description || 'No description'}\n\nPriority: ${cp.priority}\nAssigned to: ${cp.assigneeName || 'Team Member'}\nCreated by: ${cp.createdBy || 'Lead'}\n\n— Added via DevPulse`,
+    sf: 'true',
+  });
+
+  return `https://calendar.google.com/calendar/render?${params.toString()}`;
+}
 
 const PRIORITY_COLORS = {
   critical: { bg: 'bg-red-500/10', text: 'text-red-400', border: 'border-red-500/30', dot: 'bg-red-400' },
@@ -149,7 +167,7 @@ function CreateCheckpointForm({ members, onCreated, onCancel }) {
 
       <div className="flex items-center gap-3 text-xs text-muted-foreground bg-blue-500/5 border border-blue-500/10 rounded-xl px-4 py-2.5">
         <CalendarDays size={14} className="text-blue-400 flex-shrink-0" />
-        <span>If Gmail is configured, a <strong className="text-foreground">calendar invite</strong> with reminder will be emailed to the assignee automatically.</span>
+        <span>A <strong className="text-foreground">Google Calendar event</strong> will be created for the assignee automatically. If Gmail is configured, a calendar invite email will also be sent.</span>
       </div>
 
       <div className="flex justify-end gap-2">
@@ -307,6 +325,18 @@ function CheckpointCard({ cp, isLead, onUpdate, onDelete }) {
               <Edit3 size={12} /> Update Progress
             </button>
           )}
+
+          {/* Add to Google Calendar */}
+          <a
+            href={generateGoogleCalUrl(cp)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/15 px-3 py-1.5 rounded-lg transition-colors border border-emerald-500/20"
+          >
+            <CalendarDays size={12} />
+            Add to Google Calendar
+            <ExternalLink size={10} />
+          </a>
 
           <div className="text-xs text-muted-foreground">
             Created {new Date(cp.createdAt).toLocaleDateString()}
@@ -486,10 +516,10 @@ function CalendarView({ checkpoints }) {
             <div
               key={day}
               className={`h-20 rounded-lg border p-1.5 transition-colors ${isToday
-                  ? 'border-blue-500/50 bg-blue-500/5'
-                  : dayCps.length > 0
-                    ? 'border-border bg-secondary/30'
-                    : 'border-transparent'
+                ? 'border-blue-500/50 bg-blue-500/5'
+                : dayCps.length > 0
+                  ? 'border-border bg-secondary/30'
+                  : 'border-transparent'
                 }`}
             >
               <div className={`text-xs font-medium mb-1 ${isToday ? 'text-blue-400' : 'text-muted-foreground'}`}>
@@ -497,10 +527,17 @@ function CalendarView({ checkpoints }) {
               </div>
               <div className="space-y-0.5 overflow-hidden">
                 {dayCps.slice(0, 2).map((cp) => (
-                  <div key={cp.id} className="flex items-center gap-1" title={`${cp.title} — ${cp.assigneeName}`}>
+                  <a
+                    key={cp.id}
+                    href={generateGoogleCalUrl(cp)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 hover:bg-blue-500/10 rounded px-0.5 -mx-0.5 transition-colors cursor-pointer"
+                    title={`📅 Click to add "${cp.title}" to Google Calendar — Assigned to ${cp.assigneeName}`}
+                  >
                     <div className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${statusDot(cp.status)}`} />
                     <span className="text-[10px] text-foreground truncate leading-tight">{cp.title}</span>
-                  </div>
+                  </a>
                 ))}
                 {dayCps.length > 2 && (
                   <span className="text-[10px] text-muted-foreground">+{dayCps.length - 2} more</span>
@@ -730,9 +767,10 @@ export default function CheckpointPanel() {
           onCreated={(result) => {
             setShowCreate(false);
             loadData();
-            // Show confirmation if email was sent
-            if (result?.emailSent) {
-              alert(`✅ Checkpoint created! Calendar invite sent to ${result.assigneeEmail}`);
+            // Auto-open Google Calendar for the new checkpoint
+            if (result) {
+              const gcalUrl = generateGoogleCalUrl(result);
+              window.open(gcalUrl, '_blank', 'noopener,noreferrer');
             }
           }}
           onCancel={() => setShowCreate(false)}
@@ -763,8 +801,8 @@ export default function CheckpointPanel() {
                 key={f.key}
                 onClick={() => setFilter(f.key)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${filter === f.key
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-secondary text-muted-foreground hover:text-foreground border border-border'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-secondary text-muted-foreground hover:text-foreground border border-border'
                   }`}
               >
                 {f.label}

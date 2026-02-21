@@ -124,6 +124,10 @@ export const api = {
   deleteCheckpoint: (id) => deleteJson(`/checkpoints/${id}`),
   getMemberCheckpoints: (memberId) => fetchJson(`/checkpoints/member/${memberId}`),
   getProgressSummary: () => fetchJson('/checkpoints/progress'),
+
+  // Semantic Search
+  semanticSearch: (query, filters) => postJson('/search/semantic', { query, filters }),
+  getSearchSuggestions: () => fetchJson('/search/suggestions'),
 };
 
 export default api;
