@@ -1,4 +1,5 @@
-import { SIMULATION_SCENARIOS, HEALTH_SCORE } from '../data/store.js';
+import { SIMULATION_SCENARIOS } from '../data/store.js';
+import { computeHealthScore } from '../services/metrics.service.js';
 
 export const getScenarios = (_req, res) => {
   res.json(SIMULATION_SCENARIOS);
@@ -9,24 +10,26 @@ export const runSimulation = (req, res) => {
   const scenario = SIMULATION_SCENARIOS.find((s) => s.id === scenarioId);
   if (!scenario) return res.status(404).json({ error: 'Scenario not found' });
 
-  const projected = HEALTH_SCORE.overall + scenario.impact.healthDrop;
+  const health = computeHealthScore();
+  const projected = health.overall + scenario.impact.healthDrop;
 
   res.json({
     scenario,
-    currentHealth: HEALTH_SCORE.overall,
+    currentHealth: health.overall,
     projectedHealth: Math.max(0, Math.min(100, projected)),
     breakdown: {
-      deliveryRisk: HEALTH_SCORE.breakdown.deliveryRisk + (scenario.impact.riskChange.deliveryRisk || 0),
-      integrationRisk: HEALTH_SCORE.breakdown.integrationRisk + (scenario.impact.riskChange.integrationRisk || 0),
-      stabilityRisk: HEALTH_SCORE.breakdown.stabilityRisk,
+      deliveryRisk: health.breakdown.deliveryRisk + (scenario.impact.riskChange.deliveryRisk || 0),
+      integrationRisk: health.breakdown.integrationRisk + (scenario.impact.riskChange.integrationRisk || 0),
+      stabilityRisk: health.breakdown.stabilityRisk,
     },
   });
 };
 
 /** Combined payload for Simulation panel */
 export const getSimulationDashboard = (_req, res) => {
+  const health = computeHealthScore();
   res.json({
     scenarios: SIMULATION_SCENARIOS,
-    currentHealth: HEALTH_SCORE.overall,
+    currentHealth: health.overall,
   });
 };

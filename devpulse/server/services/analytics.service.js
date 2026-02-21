@@ -24,15 +24,15 @@ const fmtAgo = days =>
 /* ── Module detection from file paths ────────────────── */
 function detectModule(filepath) {
   const p = (filepath || '').toLowerCase().replace(/\\/g, '/');
-  if (/auth|login|signup|jwt|token|session/i.test(p))                    return 'auth';
-  if (/docker|\.github|ci|cd|deploy|railway|vercel|netlify/i.test(p))    return 'devops';
-  if (/models?\/|schema|migrat|db\.|database|prisma|mongoose/i.test(p))  return 'database';
-  if (/socket|chat|messag|ws\b/i.test(p))                               return 'messaging';
-  if (/search/i.test(p))                                                 return 'search';
-  if (/notif/i.test(p))                                                  return 'notifications';
-  if (/test|spec|__test/i.test(p))                                       return 'testing';
-  if (/^src\/|^client\/|^app\/|^pages\/|^components\//i.test(p))         return 'frontend';
-  if (/^server\/|^api\/|^backend\/|^routes\/|^controllers\//i.test(p))   return 'backend';
+  if (/auth|login|signup|jwt|token|session/i.test(p)) return 'auth';
+  if (/docker|\.github|ci|cd|deploy|railway|vercel|netlify/i.test(p)) return 'devops';
+  if (/models?\/|schema|migrat|db\.|database|prisma|mongoose/i.test(p)) return 'database';
+  if (/socket|chat|messag|ws\b/i.test(p)) return 'messaging';
+  if (/search/i.test(p)) return 'search';
+  if (/notif/i.test(p)) return 'notifications';
+  if (/test|spec|__test/i.test(p)) return 'testing';
+  if (/^src\/|^client\/|^app\/|^pages\/|^components\//i.test(p)) return 'frontend';
+  if (/^server\/|^api\/|^backend\/|^routes\/|^controllers\//i.test(p)) return 'backend';
   return 'setup';
 }
 
@@ -46,9 +46,23 @@ const VAGUE = [
 function analyzeHonesty(msg, files = []) {
   const trimmed = msg.trim();
   const isVague = VAGUE.some(r => r.test(trimmed)) || trimmed.length < 8;
-  const matchScore = isVague
-    ? clamp(5, 30, Math.floor(Math.random() * 25) + 5)
-    : clamp(70, 98, Math.floor(Math.random() * 15) + 80);
+
+  // Deterministic score: based on message length, word count, file coverage
+  let matchScore;
+  if (isVague) {
+    // Shorter & vaguer = lower score
+    const lenFactor = clamp(0, 15, trimmed.length); // 0-15 pts from message length
+    const fileFactor = clamp(0, 10, files.length * 2); // 0-10 pts if files mentioned
+    matchScore = clamp(5, 30, 5 + lenFactor + fileFactor);
+  } else {
+    // Score based on descriptiveness
+    const words = trimmed.split(/\s+/).length;
+    const wordFactor = clamp(0, 10, words - 3); // more words = better
+    const fileMention = files.some(f => trimmed.toLowerCase().includes(f.split('/').pop()?.split('.')[0]?.toLowerCase() || '___')) ? 8 : 0;
+    const hasScope = /^(feat|fix|chore|docs|style|refactor|test|ci)\b/i.test(trimmed) ? 5 : 0;
+    matchScore = clamp(65, 98, 70 + wordFactor + fileMention + hasScope);
+  }
+
   return {
     matchScore,
     verdict: isVague ? 'misleading' : 'honest',
@@ -65,15 +79,15 @@ function inferRole(moduleMap) {
   const total = sorted.reduce((s, [, c]) => s + c, 0);
   if (sorted[0][1] / total < 0.4 && sorted.length >= 3) return 'Full Stack Developer';
   switch (sorted[0][0]) {
-    case 'frontend':      return 'Frontend Developer';
-    case 'backend':       return 'Backend Developer';
-    case 'database':      return 'Database Engineer';
-    case 'devops':        return 'DevOps Engineer';
-    case 'auth':          return 'Security Engineer';
-    case 'testing':       return 'QA Engineer';
-    case 'messaging':     return 'Realtime Developer';
+    case 'frontend': return 'Frontend Developer';
+    case 'backend': return 'Backend Developer';
+    case 'database': return 'Database Engineer';
+    case 'devops': return 'DevOps Engineer';
+    case 'auth': return 'Security Engineer';
+    case 'testing': return 'QA Engineer';
+    case 'messaging': return 'Realtime Developer';
     case 'notifications': return 'Backend Developer';
-    default:              return 'Developer';
+    default: return 'Developer';
   }
 }
 
@@ -158,7 +172,7 @@ export async function syncFromGitHub() {
     members.forEach(m => { m.role = inferRole(memberModules[m.id] || {}); });
 
     // ── 6. Branches ───────────────────────────────────
-    const shaDateMap   = new Map(rawCommits.map(c => [c.sha, c.commit.author.date]));
+    const shaDateMap = new Map(rawCommits.map(c => [c.sha, c.commit.author.date]));
     const shaAuthorMap = new Map(rawCommits.map(c => [c.sha, (c.author?.login || '').toLowerCase()]));
     const mergedBranches = new Set(pulls.filter(p => p.merged_at).map(p => p.head.ref));
 
@@ -169,7 +183,7 @@ export async function syncFromGitHub() {
       let status = 'active';
       if (isMerged) status = 'merged';
       else if (age > 14) status = 'abandoned';
-      else if (age > 7)  status = 'stale';
+      else if (age > 7) status = 'stale';
 
       return {
         name: b.name,
@@ -357,48 +371,9 @@ export async function syncFromGitHub() {
       };
     });
 
-    // ── 13. Velocity data (last 14 days) ──────────────
-    const velocityMap = {};
-    commits.forEach(c => {
-      const d = fmtDate(c.date);
-      if (!velocityMap[d]) velocityMap[d] = {};
-      const name = members.find(m => m.id === c.author)?.name || 'Unknown';
-      velocityMap[d][name] = (velocityMap[d][name] || 0) + 1;
-    });
-
-    const velocityData = [];
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date(now);
-      d.setDate(d.getDate() - i);
-      const key = fmtDate(d);
-      const entry = { date: key };
-      members.forEach(m => { entry[m.name] = velocityMap[key]?.[m.name] || 0; });
-      velocityData.push(entry);
-    }
-
-    // ── 14. Health score ──────────────────────────────
-    let hScore = 100;
-    hScore -= transformedPRs.filter(p => p.stagnant).length * 8;
-    hScore -= activeWork.filter(w => w.status === 'inactive').length * 12;
-    hScore -= busFactor.data.reduce((cnt, row) => cnt + (Math.max(...row) >= 85 ? 1 : 0), 0) * 5;
-    hScore -= transformedPRs.filter(p => p.status === 'open' && p.reviewers.length === 0).length * 3;
-    hScore += activeWork.filter(w => w.status === 'active').length * 3;
-    hScore = clamp(0, 100, hScore);
-
-    const healthTrend = velocityData.map((v, i) => {
-      const dayTotal = members.reduce((s, m) => s + (v[m.name] || 0), 0);
-      return { date: v.date, score: clamp(20, 100, hScore + dayTotal * 5 - (13 - i) * 2) };
-    });
-
-    const deliveryRisk    = clamp(0, 100, transformedPRs.filter(p => p.stagnant).length * 15 + activeWork.filter(w => w.status === 'inactive').length * 10);
-    const integrationRisk = clamp(0, 100, integrationRisks.filter(r => r.risk > 50).length * 15);
-    const stabilityRisk   = clamp(0, 100, commits.filter(c => c.flagged).length * 8);
-
-    const healthScore = {
-      overall: hScore,
-      trend: healthTrend,
-      breakdown: { deliveryRisk, integrationRisk, stabilityRisk },
-    };
+    // ── 13-14. Health score & velocity are now computed LIVE
+    // by server/services/metrics.service.js on every request.
+    // No need to pre-compute or store them here.
 
     // ── 15. Commit honesty ────────────────────────────
     const commitHonesty = commits
@@ -417,11 +392,15 @@ export async function syncFromGitHub() {
         };
       });
 
-    // ── 16. Simulation scenarios ──────────────────────
+    // ── 16. Simulation scenarios (proportional) ──────
     const scenarios = [];
     let sIdx = 1;
+    const stalePRCount = transformedPRs.filter(p => p.stagnant).length;
+    const inactiveWCount = activeWork.filter(w => w.status === 'inactive').length;
+    const totalMembers = Math.max(members.length, 1);
 
     transformedPRs.filter(p => p.stagnant).slice(0, 2).forEach(pr => {
+      const agePenalty = clamp(5, 25, (pr.ageDays || 3) * 2);
       scenarios.push({
         id: `sim${sIdx++}`,
         name: `"${pr.title}" delayed 48h`,
@@ -429,15 +408,17 @@ export async function syncFromGitHub() {
         prId: pr.id,
         delayHours: 48,
         impact: {
-          healthDrop: -15,
+          healthDrop: -agePenalty,
           newBlockers: 1,
           affectedModules: integrationRisks.filter(r => r.risk > 40).slice(0, 2).map(r => r.module),
-          riskChange: { deliveryRisk: +20, integrationRisk: +10 },
+          riskChange: { deliveryRisk: +clamp(5, 30, agePenalty), integrationRisk: +clamp(3, 15, Math.round(agePenalty / 2)) },
         },
       });
     });
 
     activeWork.filter(w => w.status === 'inactive').slice(0, 2).forEach(w => {
+      const memberModCount = Object.keys(memberModules[w.memberId] || {}).length;
+      const ownershipPenalty = clamp(5, 20, memberModCount * 5);
       scenarios.push({
         id: `sim${sIdx++}`,
         name: `${w.name} stays inactive`,
@@ -445,10 +426,10 @@ export async function syncFromGitHub() {
         memberId: w.memberId,
         delayHours: 48,
         impact: {
-          healthDrop: -12,
-          newBlockers: 1,
+          healthDrop: -ownershipPenalty,
+          newBlockers: memberModCount > 0 ? 1 : 0,
           affectedModules: Object.keys(memberModules[w.memberId] || {}).map(cap),
-          riskChange: { deliveryRisk: +15, integrationRisk: +15 },
+          riskChange: { deliveryRisk: +clamp(5, 25, ownershipPenalty), integrationRisk: +clamp(3, 20, memberModCount * 4) },
         },
       });
     });
@@ -458,6 +439,7 @@ export async function syncFromGitHub() {
       .filter(p => p.status === 'open')
       .sort((a, b) => (b.ageDays || 0) - (a.ageDays || 0))[0];
     if (oldestOpen) {
+      const mergeBoost = clamp(3, 15, (oldestOpen.ageDays || 1) * 2);
       scenarios.push({
         id: `sim${sIdx++}`,
         name: `Merge "${oldestOpen.title}"`,
@@ -465,25 +447,34 @@ export async function syncFromGitHub() {
         prId: oldestOpen.id,
         delayHours: 0,
         impact: {
-          healthDrop: +8,
+          healthDrop: +mergeBoost,
           newBlockers: -1,
           affectedModules: [],
-          riskChange: { deliveryRisk: -10, integrationRisk: -5 },
+          riskChange: { deliveryRisk: -clamp(5, 20, mergeBoost), integrationRisk: -clamp(2, 10, Math.round(mergeBoost / 2)) },
         },
       });
     }
 
     if (scenarios.length === 0) {
+      const openCount = transformedPRs.filter(p => p.status === 'open').length;
       scenarios.push({
         id: 'sim1',
         name: 'All PRs merged today',
         description: 'What if every open PR is merged right now?',
         delayHours: 0,
-        impact: { healthDrop: +15, newBlockers: -2, affectedModules: [], riskChange: { deliveryRisk: -20, integrationRisk: -15 } },
+        impact: { healthDrop: +clamp(5, 25, openCount * 5), newBlockers: -openCount, affectedModules: [], riskChange: { deliveryRisk: -clamp(5, 30, openCount * 8), integrationRisk: -clamp(3, 20, openCount * 4) } },
       });
     }
 
     // ── 17. AI Advisor ────────────────────────────────
+    // Import live metrics for AI advisor responses
+    const { computeHealthScore: liveHealth, computeDeliveryRisk, computeIntegrationRisk, computeStabilityRisk } = await import('./metrics.service.js');
+    const liveScore = liveHealth();
+    const hScore = liveScore.overall;
+    const deliveryRisk = liveScore.breakdown.deliveryRisk;
+    const integrationRisk = liveScore.breakdown.integrationRisk;
+    const stabilityRisk = liveScore.breakdown.stabilityRisk;
+
     const inactiveNames = activeWork.filter(w => w.status === 'inactive').map(w => w.name);
     const critBF = busFactor.modules.filter((_, i) => Math.max(...busFactor.data[i]) >= 85);
     const topBlocker = blockers[0];
@@ -514,6 +505,8 @@ export async function syncFromGitHub() {
     // ── 18. Write to store ────────────────────────────
     const cleanMembers = members.map(({ _login, ...rest }) => rest);
 
+    // Health score, velocity, and contribution stats are now computed
+    // LIVE by metrics.service.js — not stored as stale snapshots.
     updateStore({
       TEAM: {
         name: repoInfo.name,
@@ -526,8 +519,6 @@ export async function syncFromGitHub() {
       COMMITS: commits,
       BRANCHES: transformedBranches,
       PULL_REQUESTS: transformedPRs,
-      HEALTH_SCORE: healthScore,
-      VELOCITY_DATA: velocityData,
       ACTIVE_WORK: activeWork,
       BLOCKERS: blockers,
       GHOSTING_ALERTS: ghostingAlerts,
@@ -536,7 +527,6 @@ export async function syncFromGitHub() {
       SIMULATION_SCENARIOS: scenarios,
       COMMIT_HONESTY: commitHonesty,
       AI_ADVISOR_RESPONSES: aiAdvisorResponses,
-      CONTRIBUTION_STATS: contributionStats,
     });
 
     github.syncedAt = now.toISOString();

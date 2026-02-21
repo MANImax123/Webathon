@@ -50,18 +50,18 @@ export default function HealthRadar() {
   const velocityData = apiData.velocity || VELOCITY_DATA;
   const { data: teamData } = useApi(api.getTeam, TEAM);
   const contributions = apiData.contributions || CONTRIBUTION_STATS;
-  const { overall, trend, breakdown } = healthScore;
-  const lastTwo = trend.slice(-2);
-  const trendDirection = lastTwo[1]?.score >= lastTwo[0]?.score ? 'up' : 'down';
+  const badges = apiData.badges || {};
+  const { overall, trend, breakdown, trendMessage } = healthScore;
+  const lastTwo = (trend || []).slice(-2);
+  const trendDirection = lastTwo.length >= 2 && lastTwo[1]?.score >= lastTwo[0]?.score ? 'up' : 'down';
 
   return (
     <div className="space-y-6">
       {/* Top Row — Score + Risk Gauges */}
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-5">
         {/* Main Health Score */}
-        <div className={`rounded-2xl bg-card border border-border p-6 col-span-1 flex flex-col items-center justify-center ${
-          overall >= 70 ? 'glow-green' : overall >= 50 ? 'glow-amber' : 'glow-red'
-        }`}>
+        <div className={`rounded-2xl bg-card border border-border p-6 col-span-1 flex flex-col items-center justify-center ${overall >= 70 ? 'glow-green' : overall >= 50 ? 'glow-amber' : 'glow-red'
+          }`}>
           <div className="relative w-36 h-36">
             <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90">
               <circle cx="50" cy="50" r="42" fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="8" />
@@ -74,15 +74,13 @@ export default function HealthRadar() {
               />
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
-              <span className={`text-5xl font-black ${
-                overall >= 70 ? 'text-green-400' : overall >= 50 ? 'text-amber-400' : 'text-red-400'
-              }`}>{overall}</span>
+              <span className={`text-5xl font-black ${overall >= 70 ? 'text-green-400' : overall >= 50 ? 'text-amber-400' : 'text-red-400'
+                }`}>{overall}</span>
               <span className="text-xs text-muted-foreground uppercase tracking-widest mt-1">Health</span>
             </div>
           </div>
-          <div className={`flex items-center gap-1.5 mt-4 text-sm font-medium ${
-            trendDirection === 'up' ? 'text-green-400' : 'text-red-400'
-          }`}>
+          <div className={`flex items-center gap-1.5 mt-4 text-sm font-medium ${trendDirection === 'up' ? 'text-green-400' : 'text-red-400'
+            }`}>
             {trendDirection === 'up' ? <TrendingUp size={14} /> : <TrendingDown size={14} />}
             <span>{trendDirection === 'up' ? 'Improving' : 'Declining'} trend</span>
           </div>
@@ -98,15 +96,18 @@ export default function HealthRadar() {
           <div className="h-16 w-px bg-border" />
           <div className="flex flex-col items-center gap-2.5">
             {[
-              { icon: AlertTriangle, label: '5 Blockers', color: 'text-red-400' },
-              { icon: Shield, label: '3 Stale PRs', color: 'text-amber-400' },
-              { icon: Zap, label: '2d behind', color: 'text-violet-400' },
-            ].map(({ icon: Icon, label, color }, i) => (
+              badges.blockerCount > 0 && { icon: AlertTriangle, label: `${badges.blockerCount} Blocker${badges.blockerCount !== 1 ? 's' : ''}`, color: 'text-red-400' },
+              badges.stalePRs > 0 && { icon: Shield, label: `${badges.stalePRs} Stale PR${badges.stalePRs !== 1 ? 's' : ''}`, color: 'text-amber-400' },
+              badges.deadlineBadge && { icon: Zap, label: badges.deadlineBadge, color: badges.deadlineBadge === 'Overdue' ? 'text-red-400' : 'text-violet-400' },
+            ].filter(Boolean).map(({ icon: Icon, label, color }, i) => (
               <div key={i} className={`flex items-center gap-2 text-sm font-medium ${color}`}>
                 <Icon size={13} />
                 <span>{label}</span>
               </div>
             ))}
+            {!badges.blockerCount && !badges.stalePRs && !badges.deadlineBadge && (
+              <span className="text-xs text-muted-foreground">No issues</span>
+            )}
           </div>
         </div>
       </div>
@@ -114,29 +115,36 @@ export default function HealthRadar() {
       {/* Health Trend Chart */}
       <div className="rounded-2xl bg-card border border-border p-6">
         <h3 className="text-base font-semibold text-foreground mb-5">Health Score Trend</h3>
-        <div className="h-56">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={trend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="healthGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
-                  <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#708090' }} axisLine={false} tickLine={false} />
-              <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#708090' }} axisLine={false} tickLine={false} />
-              <Tooltip content={<CustomTooltip />} />
-              <Area
-                type="monotone" dataKey="score" name="Health"
-                stroke="#3b82f6" strokeWidth={2}
-                fill="url(#healthGradient)"
-                dot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }}
-                activeDot={{ r: 5, fill: '#3b82f6', stroke: '#1e3a5f', strokeWidth: 2 }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
+        {trendMessage && (
+          <p className="text-xs text-muted-foreground mb-3 italic">{trendMessage}</p>
+        )}
+        {(!trend || trend.length === 0) ? (
+          <p className="text-sm text-muted-foreground text-center py-12">No historical data available yet.</p>
+        ) : (
+          <div className="h-56">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={trend} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
+                <defs>
+                  <linearGradient id="healthGradient" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.3} />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#708090' }} axisLine={false} tickLine={false} />
+                <YAxis domain={[0, 100]} tick={{ fontSize: 11, fill: '#708090' }} axisLine={false} tickLine={false} />
+                <Tooltip content={<CustomTooltip />} />
+                <Area
+                  type="monotone" dataKey="score" name="Health"
+                  stroke="#3b82f6" strokeWidth={2}
+                  fill="url(#healthGradient)"
+                  dot={{ r: 3, fill: '#3b82f6', strokeWidth: 0 }}
+                  activeDot={{ r: 5, fill: '#3b82f6', stroke: '#1e3a5f', strokeWidth: 2 }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        )}
       </div>
 
       {/* Velocity + Contribution Row */}

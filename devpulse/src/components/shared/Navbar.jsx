@@ -1,15 +1,10 @@
-import { Bell, Github, Clock } from 'lucide-react';
-import { TEAM, HEALTH_SCORE } from '../../data/demoData';
+import { Bell, Github } from 'lucide-react';
+import { TEAM } from '../../data/demoData';
 import useApi from '../../hooks/useApi';
 import api from '../../services/api';
 
 export default function Navbar() {
   const { data: teamData } = useApi(api.getTeam, TEAM);
-  const { data: healthData } = useApi(api.getHealthScore, HEALTH_SCORE);
-  const healthOverall = healthData.overall ?? HEALTH_SCORE.overall;
-  const hoursLeft = Math.max(0, Math.round(
-    (new Date(teamData.deadline || '2026-02-22T18:00:00Z') - new Date()) / (1000 * 60 * 60)
-  ));
 
   return (
     <header className="h-16 border-b border-border bg-background/80 backdrop-blur-2xl flex items-center justify-between px-6 sticky top-0 z-30">
@@ -25,28 +20,6 @@ export default function Navbar() {
 
       {/* Right — Status bar */}
       <div className="flex items-center gap-3">
-        {/* Deadline countdown */}
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-secondary border border-border">
-          <Clock size={14} className={hoursLeft <= 24 ? 'text-red-400' : 'text-amber-400'} />
-          <span className={`text-xs font-mono font-bold ${hoursLeft <= 24 ? 'text-red-400' : 'text-amber-400'}`}>
-            {hoursLeft}h left
-          </span>
-        </div>
-
-        {/* Health badge */}
-        <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border ${
-          healthOverall >= 70
-            ? 'bg-green-500/10 border-green-500/20 text-green-400'
-            : healthOverall >= 50
-            ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
-            : 'bg-red-500/10 border-red-500/20 text-red-400'
-        }`}>
-          <div className={`w-2 h-2 rounded-full ${
-            healthOverall >= 70 ? 'bg-green-400' : healthOverall >= 50 ? 'bg-amber-400' : 'bg-red-400'
-          } animate-pulse`} />
-          <span className="text-xs font-bold">{healthOverall}%</span>
-        </div>
-
         {/* Notifications */}
         <button className="relative p-2.5 rounded-xl hover:bg-secondary transition-colors text-muted-foreground hover:text-foreground">
           <Bell size={18} />

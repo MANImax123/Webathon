@@ -30,7 +30,7 @@ export const COMMITS = [
   { id: 'c8', author: 'u1', message: 'Study group CRUD API endpoints', date: '2026-02-08T09:30:00Z', files: ['server/routes/groups.js', 'server/controllers/groupController.js'], additions: 245, deletions: 15, module: 'backend' },
   { id: 'c9', author: 'u2', message: 'fixed stuff', date: '2026-02-08T23:50:00Z', files: ['server/routes/auth.js'], additions: 3, deletions: 2, module: 'auth', flagged: true, honestySuggestion: 'Fixed typo in auth route error message' },
   { id: 'c10', author: 'u3', message: 'Dashboard layout with sidebar navigation', date: '2026-02-09T11:00:00Z', files: ['src/pages/Dashboard.jsx', 'src/components/Sidebar.jsx', 'src/components/Navbar.jsx'], additions: 310, deletions: 25, module: 'frontend' },
-  
+
   // Week 2 — velocity drops, problems emerge
   { id: 'c11', author: 'u1', message: 'Real-time messaging with Socket.IO', date: '2026-02-10T10:00:00Z', files: ['server/socket/chat.js', 'src/components/Chat.jsx', 'server/index.js'], additions: 420, deletions: 30, module: 'messaging' },
   { id: 'c12', author: 'u4', message: 'Deployment to Railway', date: '2026-02-10T14:00:00Z', files: ['railway.toml', 'server/index.js'], additions: 45, deletions: 8, module: 'devops' },
@@ -70,51 +70,96 @@ export const PULL_REQUESTS = [
   { id: 'pr6', title: 'Notification system', author: 'u1', branch: 'feature/notifications', status: 'open', createdAt: '2026-02-14T11:00:00Z', mergedAt: null, reviewers: [], comments: 1, ageDays: 6 },
 ];
 
-// --- Health & Delivery Metrics ---
-export const HEALTH_SCORE = {
-  overall: 62,
-  trend: [
-    { date: 'Feb 6', score: 85 },
-    { date: 'Feb 7', score: 88 },
-    { date: 'Feb 8', score: 82 },
-    { date: 'Feb 9', score: 80 },
-    { date: 'Feb 10', score: 78 },
-    { date: 'Feb 11', score: 75 },
-    { date: 'Feb 12', score: 72 },
-    { date: 'Feb 13', score: 70 },
-    { date: 'Feb 14', score: 68 },
-    { date: 'Feb 15', score: 65 },
-    { date: 'Feb 16', score: 64 },
-    { date: 'Feb 17', score: 63 },
-    { date: 'Feb 18', score: 62 },
-    { date: 'Feb 19', score: 62 },
-    { date: 'Feb 20', score: 62 },
-  ],
-  breakdown: {
-    deliveryRisk: 38,
-    integrationRisk: 45,
-    stabilityRisk: 28,
-  },
-};
+// --- Health & Delivery Metrics (computed from demo COMMITS) ---
+// These are fallback values. When the API is available, live metrics are used instead.
+function computeDemoHealth() {
+  const clamp = (lo, hi, v) => Math.max(lo, Math.min(hi, Math.round(v)));
+  const fmtDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const daysBetween = (a, b) => Math.abs(new Date(a) - new Date(b)) / 864e5;
+  const now = new Date();
+  const members = TEAM.members;
+  const openPRs = PULL_REQUESTS.filter(p => p.status === 'open' && !p.mergedAt);
+  const stagnantPRs = openPRs.filter(p => p.stagnant);
+  const unreviewedPRs = openPRs.filter(p => (p.reviewers || []).length === 0).length;
+  const inactiveCount = members.filter(m => {
+    const mc = COMMITS.filter(c => c.author === m.id);
+    if (!mc.length) return true;
+    const latest = mc.reduce((a, b) => new Date(a.date) > new Date(b.date) ? a : b);
+    return daysBetween(latest.date, now) > 5;
+  }).length;
 
-// --- Commit Velocity (commits per day per author) ---
-export const VELOCITY_DATA = [
-  { date: 'Feb 6', Manit: 1, Ravi: 1, Priya: 1, Akshith: 1 },
-  { date: 'Feb 7', Manit: 1, Ravi: 1, Priya: 1, Akshith: 0 },
-  { date: 'Feb 8', Manit: 1, Ravi: 1, Priya: 0, Akshith: 0 },
-  { date: 'Feb 9', Manit: 0, Ravi: 0, Priya: 1, Akshith: 0 },
-  { date: 'Feb 10', Manit: 1, Ravi: 0, Priya: 0, Akshith: 1 },
-  { date: 'Feb 11', Manit: 0, Ravi: 1, Priya: 1, Akshith: 0 },
-  { date: 'Feb 12', Manit: 1, Ravi: 0, Priya: 0, Akshith: 0 },
-  { date: 'Feb 13', Manit: 0, Ravi: 1, Priya: 0, Akshith: 0 },
-  { date: 'Feb 14', Manit: 1, Ravi: 0, Priya: 0, Akshith: 0 },
-  { date: 'Feb 15', Manit: 0, Ravi: 0, Priya: 1, Akshith: 0 },
-  { date: 'Feb 16', Manit: 1, Ravi: 0, Priya: 0, Akshith: 0 },
-  { date: 'Feb 17', Manit: 0, Ravi: 0, Priya: 0, Akshith: 1 },
-  { date: 'Feb 18', Manit: 1, Ravi: 0, Priya: 1, Akshith: 0 },
-  { date: 'Feb 19', Manit: 1, Ravi: 0, Priya: 0, Akshith: 0 },
-  { date: 'Feb 20', Manit: 0, Ravi: 0, Priya: 0, Akshith: 0 },
-];
+  const deliveryRisk = clamp(0, 100, stagnantPRs.length * 15 + inactiveCount * 18 + unreviewedPRs * 8);
+  const divergedBranches = BRANCHES.filter(b => b.name !== 'main' && b.status !== 'merged' && ((b.behind || 0) > 5 || b.status === 'abandoned' || b.status === 'stale')).length;
+  const integrationRisk = clamp(0, 100, divergedBranches * 12 + 20);
+  const vagueCount = COMMITS.filter(c => c.flagged).length;
+  const stabilityRisk = clamp(0, 100, (vagueCount / Math.max(COMMITS.length, 1)) * 50);
+
+  const overall = clamp(0, 100, 100 - (deliveryRisk * 0.45 + integrationRisk * 0.30 + stabilityRisk * 0.25));
+
+  // Trend: group commits by date, compute per-day health
+  const sortedDates = COMMITS.map(c => new Date(c.date)).sort((a, b) => a - b);
+  const firstDate = new Date(sortedDates[0]);
+  firstDate.setHours(0, 0, 0, 0);
+  const endDate = new Date(sortedDates[sortedDates.length - 1]);
+  endDate.setHours(23, 59, 59, 999);
+  const trend = [];
+  const dayMs = 864e5;
+  for (let d = new Date(firstDate); d <= endDate; d = new Date(d.getTime() + dayMs)) {
+    const endOfDay = new Date(d); endOfDay.setHours(23, 59, 59, 999);
+    const cumCommits = COMMITS.filter(c => new Date(c.date) <= endOfDay);
+    const vague = cumCommits.filter(c => c.flagged).length;
+    const st = clamp(0, 100, (vague / Math.max(cumCommits.length, 1)) * 50);
+    const dayScore = clamp(0, 100, 100 - (deliveryRisk * 0.45 + integrationRisk * 0.30 + st * 0.25));
+    trend.push({ date: fmtDate(d), score: dayScore });
+  }
+
+  return { overall, trend, breakdown: { deliveryRisk, integrationRisk, stabilityRisk } };
+}
+
+function computeDemoVelocity() {
+  const fmtDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  const members = TEAM.members;
+  const sortedDates = COMMITS.map(c => new Date(c.date)).sort((a, b) => a - b);
+  const firstDate = new Date(sortedDates[0]); firstDate.setHours(0, 0, 0, 0);
+  const lastDate = new Date(sortedDates[sortedDates.length - 1]); lastDate.setHours(0, 0, 0, 0);
+
+  const velocityMap = {};
+  COMMITS.forEach(c => {
+    const key = fmtDate(c.date);
+    if (!velocityMap[key]) velocityMap[key] = {};
+    const name = members.find(m => m.id === c.author)?.name || c.author;
+    velocityMap[key][name] = (velocityMap[key][name] || 0) + 1;
+  });
+
+  const velocity = [];
+  const dayMs = 864e5;
+  for (let d = new Date(firstDate); d <= lastDate; d = new Date(d.getTime() + dayMs)) {
+    const key = fmtDate(d);
+    const entry = { date: key };
+    members.forEach(m => { entry[m.name] = velocityMap[key]?.[m.name] || 0; });
+    velocity.push(entry);
+  }
+  return velocity;
+}
+
+function computeDemoContributions() {
+  const members = TEAM.members;
+  const total = Math.max(COMMITS.length, 1);
+  return members.map(m => {
+    const mc = COMMITS.filter(c => c.author === m.id);
+    return {
+      name: m.name,
+      commits: mc.length,
+      additions: mc.reduce((s, c) => s + (c.additions || 0), 0),
+      deletions: mc.reduce((s, c) => s + (c.deletions || 0), 0),
+      percentage: Math.round((mc.length / total) * 100),
+    };
+  });
+}
+
+export const HEALTH_SCORE = computeDemoHealth();
+export const VELOCITY_DATA = computeDemoVelocity();
+export const CONTRIBUTION_STATS = computeDemoContributions();
 
 // --- Active Work Map ---
 export const ACTIVE_WORK = [
@@ -319,10 +364,4 @@ export const GHOSTING_ALERTS = [
   },
 ];
 
-// --- Contribution Stats ---
-export const CONTRIBUTION_STATS = [
-  { name: 'Manit', commits: 10, additions: 2067, deletions: 181, percentage: 43 },
-  { name: 'Ravi', commits: 5, additions: 588, deletions: 125, percentage: 22 },
-  { name: 'Priya', commits: 5, additions: 983, deletions: 96, percentage: 22 },
-  { name: 'Akshith', commits: 3, additions: 260, deletions: 20, percentage: 13 },
-];
+// CONTRIBUTION_STATS is now computed above by computeDemoContributions()

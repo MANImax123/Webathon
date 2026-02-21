@@ -1,18 +1,59 @@
-import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as store from '../data/store.js';
+import * as metricsService from '../services/metrics.service.js';
 
-/* ── Gemini setup ─────────────────────────────────────── */
-let geminiModel = null;
-const geminiKey = process.env.GEMINI_API_KEY;
-if (geminiKey && geminiKey !== 'PASTE_YOUR_GEMINI_API_KEY_HERE') {
-  const genAI = new GoogleGenerativeAI(geminiKey);
-  geminiModel = genAI.getGenerativeModel({ model: 'gemini-2.0-flash' });
-  console.log('🧠 Gemini AI initialized for AI Advisor');
+// Helper: returns metrics functions (avoids circular import issues)
+const require_metrics = () => metricsService;
+
+/* ── OpenRouter setup ─────────────────────────────────── */
+const OPENROUTER_URL = 'https://openrouter.ai/api/v1/chat/completions';
+const OPENROUTER_MODEL = process.env.OPENROUTER_MODEL || 'google/gemma-3-12b-it:free';
+const OPENROUTER_KEY = process.env.OPENROUTER_API_KEY;
+const aiEnabled = Boolean(OPENROUTER_KEY && OPENROUTER_KEY !== 'PASTE_YOUR_OPENROUTER_API_KEY_HERE');
+if (aiEnabled) {
+  console.log(`🧠 OpenRouter AI initialized (${OPENROUTER_MODEL}) for AI Advisor`);
+} else {
+  console.log('⚠️  OPENROUTER_API_KEY not set — AI Advisor will use keyword fallback only');
+}
+
+async function callOpenRouter(systemPrompt, userMessage) {
+  // Merge system + user into a single user message
+  // (Google models via AI Studio don't support the system role)
+  const combinedMessage = `${systemPrompt}\n\nUSER QUESTION: ${userMessage}`;
+
+  const res = await fetch(OPENROUTER_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${OPENROUTER_KEY}`,
+      'HTTP-Referer': 'https://devpulse.app',
+      'X-Title': 'DevPulse',
+    },
+    body: JSON.stringify({
+      model: OPENROUTER_MODEL,
+      messages: [
+        { role: 'user', content: combinedMessage },
+      ],
+      max_tokens: 1024,
+      temperature: 0.7,
+    }),
+  });
+
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error(`OpenRouter ${res.status}: ${body.error?.message || JSON.stringify(body)}`);
+  }
+
+  const data = await res.json();
+  return data.choices?.[0]?.message?.content || null;
 }
 
 /* ── Build rich project context for Gemini ────────────── */
 function buildProjectContext() {
-  const h  = store.HEALTH_SCORE || {};
+  // Import live-computed metrics instead of stale store snapshots
+  const { computeHealthScore, computeVelocity, computeContributions } = require_metrics();
+  const h = computeHealthScore();
+  const cs = computeContributions();
+  const vd = computeVelocity();
   const tm = store.TEAM?.members || [];
   const bl = store.BLOCKERS || [];
   const gh = store.GHOSTING_ALERTS || [];
@@ -20,10 +61,8 @@ function buildProjectContext() {
   const pr = store.PULL_REQUESTS || [];
   const aw = store.ACTIVE_WORK || [];
   const ir = store.INTEGRATION_RISKS || [];
-  const cs = store.CONTRIBUTION_STATS || [];
   const ch = store.COMMIT_HONESTY || [];
   const cp = store.CHECKPOINTS || [];
-  const vd = store.VELOCITY_DATA || [];
 
   return `
 === DEVPULSE PROJECT DATA (live) ===
@@ -89,11 +128,11 @@ export const askAdvisor = async (req, res) => {
   const { question } = req.body;
   if (!question) return res.status(400).json({ error: 'question is required' });
 
-  // Try Gemini first
-  if (geminiModel) {
+  // Try OpenRouter AI first
+  if (aiEnabled) {
     try {
       const context = buildProjectContext();
-      const prompt = `You are DevPulse AI — an expert project delivery risk advisor for software teams.
+      const systemPrompt = `You are DevPulse AI — an expert project delivery risk advisor for software teams.
 You analyse live project data and give sharp, actionable insights.
 
 RULES:
@@ -110,24 +149,22 @@ RULES:
 - End with a clear recommendation or next step
 
 LIVE PROJECT DATA:
-${context}
+${context}`;
 
-USER QUESTION: ${question}
+      const text = await callOpenRouter(systemPrompt, question);
 
-Respond as DevPulse AI:`;
-
-      const result = await geminiModel.generateContent(prompt);
-      const text = result.response.text();
-
-      return res.json({
-        question,
-        response: text,
-        confidence: 95,
-        source: 'gemini',
-        timestamp: new Date().toISOString(),
-      });
+      if (text) {
+        return res.json({
+          question,
+          response: text,
+          confidence: 95,
+          source: 'openrouter',
+          timestamp: new Date().toISOString(),
+        });
+      }
+      // null response — fall through to keyword fallback
     } catch (err) {
-      console.error('Gemini advisor error:', err.message);
+      console.error('OpenRouter advisor error:', err.message);
       // Fall through to keyword fallback
     }
   }

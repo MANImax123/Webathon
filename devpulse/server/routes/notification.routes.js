@@ -3,6 +3,7 @@ import {
   getStatus,
   configureDiscord, disconnectDiscord, testDiscord,
   configureGmail, disconnectGmail, testGmail,
+  configureGoogleCalendar, disconnectGoogleCalendar, testGoogleCalendar,
   sendGhostingAlerts, sendBlockerAlerts, sendHealthSummary,
 } from '../controllers/notification.controller.js';
 
@@ -20,6 +21,11 @@ router.post('/discord/test',       testDiscord);
 router.post('/gmail/configure',  configureGmail);
 router.post('/gmail/disconnect', disconnectGmail);
 router.post('/gmail/test',       testGmail);
+
+// Google Calendar
+router.post('/gcal/configure',  configureGoogleCalendar);
+router.post('/gcal/disconnect', disconnectGoogleCalendar);
+router.post('/gcal/test',       testGoogleCalendar);
 
 // Send alerts
 router.post('/send/ghosting',  sendGhostingAlerts);

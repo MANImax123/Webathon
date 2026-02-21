@@ -5,13 +5,16 @@
 
 import discord from '../services/discord.service.js';
 import gmail from '../services/gmail.service.js';
-import { GHOSTING_ALERTS, BLOCKERS, HEALTH_SCORE, TEAM } from '../data/store.js';
+import googleCalendar from '../services/google-calendar.service.js';
+import { GHOSTING_ALERTS, BLOCKERS, TEAM } from '../data/store.js';
+import { computeHealthScore } from '../services/metrics.service.js';
 
 /* ── Status ────────────────────────────────────────── */
 export const getStatus = (_req, res) => {
   res.json({
     discord: discord.status,
-    gmail:   gmail.status,
+    gmail: gmail.status,
+    googleCalendar: googleCalendar.status,
   });
 };
 
@@ -61,6 +64,53 @@ export const testGmail = async (_req, res) => {
       '<div style="font-family:system-ui;padding:20px;background:#1a1a2e;color:#e5e5e5;border-radius:12px;text-align:center"><h2 style="color:#10b981">✅ Gmail Connected</h2><p>DevPulse notifications are working correctly.</p></div>',
     );
     res.json({ status: 'sent', messageId: result?.messageId });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+/* ── Google Calendar ───────────────────────────────── */
+export const configureGoogleCalendar = (req, res) => {
+  const { serviceAccountEmail, serviceAccountKey, clientId, clientSecret, refreshToken } = req.body;
+
+  try {
+    // Prefer service account approach
+    if (serviceAccountEmail && serviceAccountKey) {
+      googleCalendar.configure({ serviceAccountEmail, serviceAccountKey });
+    } else if (clientId && clientSecret && refreshToken) {
+      googleCalendar.configure({ clientId, clientSecret, refreshToken });
+    } else {
+      return res.status(400).json({
+        error: 'Provide either serviceAccountEmail + serviceAccountKey, or clientId + clientSecret + refreshToken',
+      });
+    }
+    res.json({ status: 'configured', ...googleCalendar.status });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+};
+
+export const disconnectGoogleCalendar = (_req, res) => {
+  googleCalendar.disconnect();
+  res.json({ status: 'disconnected' });
+};
+
+export const testGoogleCalendar = async (_req, res) => {
+  try {
+    if (!googleCalendar.enabled) return res.status(400).json({ error: 'Google Calendar not configured' });
+    const testEvent = await googleCalendar.createCheckpointEvent(
+      {
+        title: 'DevPulse Test Event',
+        description: 'This is a test event to verify Google Calendar integration.',
+        deadline: new Date(Date.now() + 86400000).toISOString(),
+        priority: 'medium',
+        assigneeName: 'Test',
+        createdBy: 'DevPulse',
+      },
+      [],
+      'DevPulse Test',
+    );
+    res.json({ status: 'sent', event: testEvent });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -117,13 +167,14 @@ export const sendBlockerAlerts = async (req, res) => {
 /* ── Send health summary ─────────────────────────────── */
 export const sendHealthSummary = async (_req, res) => {
   const results = { discord: false, gmail: false, errors: [] };
+  const liveHealth = computeHealthScore();
 
   if (discord.enabled) {
-    try { await discord.sendHealthSummary(HEALTH_SCORE, TEAM); results.discord = true; }
+    try { await discord.sendHealthSummary(liveHealth, TEAM); results.discord = true; }
     catch (err) { results.errors.push({ channel: 'discord', error: err.message }); }
   }
   if (gmail.enabled) {
-    try { await gmail.sendHealthSummary(HEALTH_SCORE, TEAM); results.gmail = true; }
+    try { await gmail.sendHealthSummary(liveHealth, TEAM); results.gmail = true; }
     catch (err) { results.errors.push({ channel: 'gmail', error: err.message }); }
   }
 

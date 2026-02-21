@@ -7,6 +7,7 @@ import * as store from '../data/store.js';
 import github from '../services/github.service.js';
 import gmail from '../services/gmail.service.js';
 import calendarService from '../services/calendar.service.js';
+import googleCalendar from '../services/google-calendar.service.js';
 
 let nextId = 100; // auto-increment ID
 
@@ -86,7 +87,7 @@ export const createCheckpoint = async (req, res) => {
     progress: 0,
   };
 
-  store.CHECKPOINTS = [...(store.CHECKPOINTS || []), checkpoint];
+  store.updateStore({ CHECKPOINTS: [...(store.CHECKPOINTS || []), checkpoint] });
 
   // Send calendar invite email if Gmail is configured and assignee has an email
   let emailSent = false;
@@ -103,22 +104,55 @@ export const createCheckpoint = async (req, res) => {
 
   // Create Google Calendar event if configured
   let calendarEvent = null;
-  if (calendarService.enabled && assigneeEmail) {
+  if (googleCalendar.enabled && assigneeEmail) {
     try {
-      calendarEvent = await calendarService.createTaskEvent({
-        title: checkpoint.title,
-        description: checkpoint.description,
-        email: assigneeEmail,
-        date: checkpoint.deadline,
-        priority: checkpoint.priority,
-        assigneeName: checkpoint.assigneeName,
-      });
+      // Fetch collaborator emails from GitHub API
+      let collaboratorEmails = [];
+      if (github.isConfigured) {
+        console.log('📧 Fetching collaborator emails from GitHub API…');
+        const collabs = await github.getCollaboratorEmails();
+        console.log('📧 GitHub collaborators found:', JSON.stringify(collabs, null, 2));
+        collaboratorEmails = collabs
+          .map(c => c.email)
+          .filter(e => e && e.includes('@'));
+      }
+
+      // Fall back to team store emails if GitHub returned none
+      if (collaboratorEmails.length === 0) {
+        const storeMembers = (store.TEAM?.members || []);
+        console.log('📧 GitHub returned no emails. Falling back to store members:', storeMembers.map(m => ({ name: m.name, email: m.email })));
+        collaboratorEmails = storeMembers
+          .map(m => m.email)
+          .filter(e => e && e.includes('@'));
+      }
+
+      console.log('📧 Final attendee emails for calendar event:', collaboratorEmails);
+
+      const teamName = store.TEAM?.repo || store.TEAM?.name || 'Project';
+      calendarEvent = await googleCalendar.createCheckpointEvent(
+        checkpoint,
+        collaboratorEmails,
+        teamName,
+      );
+      // Store the calendar eventId on the checkpoint for future updates/deletes
+      if (calendarEvent?.eventId) {
+        checkpoint.calendarEventId = calendarEvent.eventId;
+        checkpoint.calendarLink = calendarEvent.htmlLink;
+        // Update in store
+        const updatedList = (store.CHECKPOINTS || []).map(c => c.id === checkpoint.id ? checkpoint : c);
+        store.updateStore({ CHECKPOINTS: updatedList });
+      }
     } catch (err) {
       console.warn('Failed to create Google Calendar event:', err.message);
     }
   }
 
-  res.status(201).json({ ...checkpoint, emailSent, assigneeEmail, calendarEvent });
+  res.status(201).json({
+    ...checkpoint,
+    emailSent,
+    assigneeEmail,
+    calendarEvent: calendarEvent || null,
+  });
 };
 
 /** PUT /api/checkpoints/:id — update checkpoint (lead can edit all, member can update own progress) */
@@ -145,7 +179,7 @@ export const updateCheckpoint = (req, res) => {
     }
     const newList = [...checkpoints];
     newList[idx] = updated;
-    store.CHECKPOINTS = newList;
+    store.updateStore({ CHECKPOINTS: newList });
     return res.json(updated);
   }
 
@@ -173,12 +207,12 @@ export const updateCheckpoint = (req, res) => {
 
   const newList = [...checkpoints];
   newList[idx] = updated;
-  store.CHECKPOINTS = newList;
+  store.updateStore({ CHECKPOINTS: newList });
   res.json(updated);
 };
 
 /** DELETE /api/checkpoints/:id — delete checkpoint (lead only) */
-export const deleteCheckpoint = (req, res) => {
+export const deleteCheckpoint = async (req, res) => {
   if (github.token && !github.isLead) {
     return res.status(403).json({ error: 'Only the repository lead/admin can delete checkpoints' });
   }
@@ -187,7 +221,17 @@ export const deleteCheckpoint = (req, res) => {
   const idx = checkpoints.findIndex(c => c.id === req.params.id);
   if (idx === -1) return res.status(404).json({ error: 'Checkpoint not found' });
 
-  store.CHECKPOINTS = checkpoints.filter(c => c.id !== req.params.id);
+  // Remove associated Google Calendar event if it exists
+  const cp = checkpoints[idx];
+  if (cp.calendarEventId && googleCalendar.enabled) {
+    try {
+      await googleCalendar.deleteCheckpointEvent(cp.calendarEventId);
+    } catch (err) {
+      console.warn('Failed to delete calendar event:', err.message);
+    }
+  }
+
+  store.updateStore({ CHECKPOINTS: checkpoints.filter(c => c.id !== req.params.id) });
   res.json({ deleted: true });
 };
 
